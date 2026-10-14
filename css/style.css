@@ -1,17 +1,46 @@
-/* ========== Google Pixel / M3 Expressive 精细化设计系统 ========== */
+/* ========== Google Material 3 设计令牌 ========== */
 :root {
-  /* 色彩系统 - 低饱和鼠尾草绿系 */
-  --color-bg: #F9FAEF;
-  --color-surface: #FFFFFF;
-  --color-sidebar: #DEE5D2;
-  --color-primary: #5A6B4E;
-  --color-primary-light: #7A8B6E;
-  --color-outline: #DEE5D2;
-  --color-text: #1d1b20;
-  --color-text-secondary: #49454f;
-  --color-text-tertiary: #79747e;
-  --color-success: #386A20;
-  --color-error: #BA1A1A;
+  /* M3 颜色令牌 - 浅鼠尾草绿主题 */
+  --md-sys-color-primary: #456B56;
+  --md-sys-color-on-primary: #FFFFFF;
+  --md-sys-color-primary-container: #DCE9DF;
+  --md-sys-color-on-primary-container: #183D2A;
+  --md-sys-color-secondary-container: #DCE9DF;
+  --md-sys-color-background: #F1F6F0;
+  --md-sys-color-surface: #FFFFFF;
+  --md-sys-color-on-surface: #263D30;
+  --md-sys-color-on-surface-variant: #68776C;
+  --md-sys-color-outline: #DCE5DC;
+  --md-sys-color-outline-variant: #E0E5E0;
+  --md-sys-color-error: #BA1A1A;
+  --md-sys-color-on-error: #FFFFFF;
+  --md-sys-color-error-container: #FFDAD6;
+
+  /* M3 圆角令牌 */
+  --md-sys-shape-corner-extra-small: 8px;
+  --md-sys-shape-corner-small: 12px;
+  --md-sys-shape-corner-medium: 16px;
+  --md-sys-shape-corner-large: 20px;
+  --md-sys-shape-corner-extra-large: 24px;
+
+  /* M3 间距令牌 */
+  --md-sys-spacing-1: 4px;
+  --md-sys-spacing-2: 8px;
+  --md-sys-spacing-3: 12px;
+  --md-sys-spacing-4: 16px;
+  --md-sys-spacing-5: 20px;
+  --md-sys-spacing-6: 24px;
+  --md-sys-spacing-8: 32px;
+  --md-sys-spacing-10: 40px;
+
+  /* 兼容旧变量 */
+  --color-bg: var(--md-sys-color-background);
+  --color-surface: var(--md-sys-color-surface);
+  --color-primary: var(--md-sys-color-primary);
+  --color-primary-light: var(--md-sys-color-primary-container);
+  --color-outline: var(--md-sys-color-outline);
+  --color-text: var(--md-sys-color-on-surface);
+  --color-text-secondary: var(--md-sys-color-on-surface-variant);
   
   /* 圆角系统 */
   --radius-sm: 12px;

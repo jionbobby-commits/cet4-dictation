@@ -84,6 +84,13 @@ const DrawCanvas = (() => {
         resizeCanvas();
       }, 200);
     });
+
+    // 屏幕方向变化时重设画布
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => {
+        resizeCanvas();
+      }, 300);
+    });
   }
 
   /**
