@@ -1443,7 +1443,7 @@ body {
 }
 
 .progress-bar {
-  background: var(--sage-primary-light);
+  background: transparent;
 }
 
 .wavy-progress {
