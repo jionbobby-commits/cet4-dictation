@@ -77,7 +77,7 @@
   --md-sys-spacing-10: var(--space-10);
   --color-bg: var(--md-background);
   --color-surface: var(--md-surface);
-  --color-sidebar: var(--md-primary-container);
+  --color-sidebar: var(--md-background);
   --color-primary: var(--md-primary);
   --color-primary-light: var(--md-primary-container);
   --color-outline: var(--md-outline);
@@ -137,7 +137,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .text-red { color: var(--md-error) !important; }
 
 /* Main shell and navigation */
-.app-layout { display: flex; min-height: 100vh; background: var(--md-primary); }
+.app-layout { display: flex; min-height: 100vh; background: var(--color-sidebar); }
 .sidebar {
   position: sticky;
   top: 0;
@@ -147,7 +147,7 @@ ul { margin: 0; padding: 0; list-style: none; }
   width: 82px;
   height: 100vh;
   padding: 18px 8px;
-  background: var(--md-primary);
+  background: var(--color-sidebar);
   border-right: 0;
 }
 .sidebar-logo {
@@ -188,14 +188,14 @@ ul { margin: 0; padding: 0; list-style: none; }
   border: 0;
   border-radius: var(--shape-lg);
   background: transparent;
-  color: rgb(255 255 255 / 80%);
+  color: var(--md-on-surface-variant);
   cursor: pointer;
   text-align: center;
   transition: background var(--motion-standard), color var(--motion-standard), transform var(--motion-standard);
 }
-.sidebar-item:hover { background: rgb(255 255 255 / 12%); color: var(--md-on-primary); }
+.sidebar-item:hover { background: color-mix(in srgb, var(--md-primary) 8%, transparent); color: var(--md-primary); }
 .sidebar-item:active { transform: scale(.98); }
-.sidebar-item.active { background: transparent; color: var(--md-on-primary); font-weight: 650; }
+.sidebar-item.active { background: transparent; color: var(--md-primary); font-weight: 650; }
 .sidebar-item.active .sidebar-icon { width: 52px; border-radius: var(--shape-full); background: var(--md-accent); color: var(--md-on-accent); animation: nav-icon-settle 280ms cubic-bezier(.2, 0, 0, 1) both; }
 @keyframes nav-icon-settle { from { transform: scale(.78); } 72% { transform: scale(1.06); } to { transform: scale(1); } }
 .sidebar-icon { display: grid; width: 24px; height: 24px; flex: 0 0 24px; place-items: center; }
