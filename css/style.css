@@ -789,23 +789,31 @@ ul {
   .sidebar-item {
     flex: 1;
     min-width: 0;
-    padding: 8px 4px;
+    padding: 8px 2px;
     border-radius: 0;
     flex-direction: column;
     gap: 4px;
     justify-content: center;
     align-items: center;
     background: transparent;
+    border: none;
+    cursor: pointer;
   }
 
-  .sidebar-item.active {
-    background: transparent;
+  .sidebar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
   }
 
   .sidebar-item.active .sidebar-icon {
     background: var(--sage-primary-light);
-    border-radius: 20px;
-    padding: 6px 16px;
+    border-radius: 16px;
+    padding: 6px 14px;
+    width: auto;
+    height: auto;
   }
 
   .sidebar-text {
@@ -813,6 +821,7 @@ ul {
     font-size: 11px;
     white-space: nowrap;
     font-weight: 500;
+    color: var(--text-secondary);
   }
 
   .sidebar-item.active .sidebar-text {
