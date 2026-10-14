@@ -749,6 +749,9 @@ ul {
   .app-layout {
     flex-direction: column;
     width: 100%;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .sidebar {
@@ -795,6 +798,8 @@ ul {
     padding: 16px;
     width: 100%;
     max-width: 100%;
+    flex: 1;
+    overflow-y: visible;
   }
 
   .card {
