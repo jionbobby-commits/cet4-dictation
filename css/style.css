@@ -159,7 +159,7 @@ ul { margin: 0; padding: 0; list-style: none; }
   min-height: 54px;
   margin: 0 0 26px;
   padding: 0;
-  color: var(--md-on-primary);
+  color: var(--md-on-surface);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0;
@@ -188,7 +188,7 @@ ul { margin: 0; padding: 0; list-style: none; }
   border: 0;
   border-radius: var(--shape-lg);
   background: transparent;
-  color: var(--md-on-surface-variant);
+  color: var(--md-on-surface);
   cursor: pointer;
   text-align: center;
   transition: background var(--motion-standard), color var(--motion-standard), transform var(--motion-standard);
@@ -432,7 +432,7 @@ input[type="file"] { min-height: 44px; padding: 8px; }
 .speech-status { min-height: 20px; margin-top: 10px; color: var(--md-on-surface-variant); font-size: 13px; }
 .hint-display { margin-top: 12px; padding: 12px 16px; border-radius: var(--shape-md); background: var(--md-primary-container); color: var(--md-on-primary-container); font-size: 15px; }
 .canvas-wrap { margin-bottom: 18px; padding: 16px; border: 1px solid var(--md-outline); border-radius: var(--shape-xl); background: var(--md-surface); }
-#drawCanvas { display: block; width: 100%; height: clamp(220px, 32vh, 340px); border: 1px solid var(--md-outline-variant); border-radius: var(--shape-md); background: #fff; touch-action: none; cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%2352634b' d='M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.69-1.62-.92l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.44.17-.48.41l-.36 2.54c-.59.23-1.13.54-1.62.92l-2.39-.96c-.22-.08-.47.01-.59.22L2.65 8.87c-.12.21-.07.47.12.61l2.03 1.58c-.05.31-.07.62-.07.94s.02.63.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.69 1.62.92l.36 2.54c.04.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.23 1.13-.54 1.62-.92l2.39.96c.22.08.47-.01.59-.22l1.92-3.32c.12-.21.07-.47-.12-.61l-2.03-1.58ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z'/%3E%3C/svg%3E") 12 12, crosshair; }
+#drawCanvas { display: block; width: 100%; height: clamp(220px, 32vh, 340px); border: 1px solid var(--md-outline-variant); border-radius: var(--shape-md); background: #fff; touch-action: none; cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='5' fill='%2352634B'/%3E%3C/svg%3E") 12 12, crosshair; }
 .canvas-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 .pen-size { display: flex; align-items: center; gap: 10px; margin-left: auto; color: var(--md-on-surface-variant); font-size: 13px; }
 .pen-size input { width: 140px; padding: 0; border: 0; }
@@ -547,7 +547,7 @@ input[type="file"] { min-height: 44px; padding: 8px; }
   .plan-progress-summary { background: var(--md-surface-low); }
   .progress-track-plan { background: var(--md-outline-variant); }
   .sidebar-item:hover { background: transparent; }
-  .sidebar-item { color: var(--md-on-surface-variant); }
+  .sidebar-item { color: var(--md-on-surface); }
   .sidebar-item.active { color: var(--md-on-primary-container); }
   .app-layout { display: block; min-height: 100vh; background: var(--md-background); }
   .sidebar { position: fixed; z-index: 1000; inset: auto 0 0; display: block; width: 100%; height: auto; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); border: 0; border-top: 1px solid var(--md-outline-variant); background: rgb(249 250 239 / 96%); backdrop-filter: blur(14px); }
