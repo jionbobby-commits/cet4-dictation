@@ -747,24 +747,24 @@ ul {
   }
 
   .app-layout {
-    flex-direction: column;
-    width: 100%;
-    height: auto;
-    min-height: 100vh;
-    overflow: visible;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow: visible !important;
   }
 
   .sidebar {
-    width: 100%;
-    height: auto;
-    flex-direction: row;
-    padding: 8px 12px;
-    overflow-x: auto;
-    background: var(--sage-primary-light);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    flex-shrink: 0;
+    width: 100% !important;
+    height: auto !important;
+    flex-direction: row !important;
+    padding: 8px 12px !important;
+    overflow-x: auto !important;
+    background: var(--sage-primary-light) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    flex-shrink: 0 !important;
   }
 
   .sidebar-logo {
