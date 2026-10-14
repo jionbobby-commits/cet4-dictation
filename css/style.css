@@ -736,8 +736,19 @@ ul {
 
 /* ========== 手机端适配 ========== */
 @media (max-width: 768px) {
+  /* 全局防止横向溢出 */
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
   .app-layout {
     flex-direction: column;
+    width: 100%;
   }
 
   .sidebar {
@@ -750,6 +761,7 @@ ul {
     position: sticky;
     top: 0;
     z-index: 100;
+    flex-shrink: 0;
   }
 
   .sidebar-logo {
@@ -760,23 +772,35 @@ ul {
     flex-direction: row;
     padding: 0;
     gap: 4px;
+    width: 100%;
   }
 
   .sidebar-item {
-    flex-shrink: 0;
-    padding: 10px 14px;
+    flex-shrink: 1;
+    min-width: 0;
+    padding: 10px 12px;
     border-radius: 20px;
     flex-direction: column;
     gap: 4px;
+    justify-content: center;
   }
 
   .sidebar-text {
     display: block;
     font-size: 11px;
+    white-space: nowrap;
   }
 
   .app-main {
     padding: 16px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .card {
+    padding: 16px;
+    width: 100%;
+    max-width: 100%;
   }
 
   .card-grid {
@@ -797,12 +821,19 @@ ul {
   /* 统计卡片手机端 */
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
   /* 表单行手机端 */
   .form-row {
     flex-direction: column;
     gap: 8px;
+    align-items: stretch;
+  }
+
+  .form-row select,
+  .form-row input[type="date"] {
+    width: 100%;
   }
 
   /* 日期范围选择器手机端 */
@@ -811,14 +842,70 @@ ul {
     gap: 12px;
   }
 
+  .date-range-item {
+    width: 100%;
+  }
+
+  .date-range-item input {
+    width: 100%;
+  }
+
   /* 顶部统计手机端 */
   .plan-stats {
     flex-wrap: wrap;
     gap: 12px;
+    justify-content: space-around;
   }
 
   .stat-item {
-    min-width: 80px;
+    min-width: 70px;
+  }
+
+  /* 按钮手机端 */
+  .btn {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+
+  .btn-lg {
+    width: 100%;
+  }
+
+  /* 手写板容器 */
+  .canvas-container,
+  #canvas {
+    width: 100% !important;
+    max-width: 100%;
+  }
+
+  /* 听写区域 */
+  .speech-buttons {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+}
+
+/* 超窄手机（320px）适配 */
+@media (max-width: 360px) {
+  .plan-list {
+    grid-template-columns: 1fr;
+  }
+
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-item {
+    padding: 8px 10px;
+  }
+
+  .sidebar-text {
+    font-size: 10px;
   }
 }
 
