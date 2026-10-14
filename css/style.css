@@ -773,9 +773,10 @@ ul {
   }
 
   .app-main {
-    padding-top: 80px !important;
+    padding-top: 88px !important;
     padding-left: 16px !important;
     padding-right: 16px !important;
+    padding-bottom: 24px !important;
   }
 
   .sidebar-logo {
@@ -810,14 +811,16 @@ ul {
     justify-content: center;
     width: 24px;
     height: 24px;
+    color: var(--text-secondary);
   }
 
   .sidebar-item.active .sidebar-icon {
     background: var(--sage-primary-light);
-    border-radius: 16px;
-    padding: 6px 14px;
+    border-radius: 20px;
+    padding: 6px 16px;
     width: auto;
     height: auto;
+    color: var(--sage-primary-dark);
   }
 
   .sidebar-text {
@@ -842,9 +845,10 @@ ul {
   }
 
   .card {
-    padding: 16px;
+    padding: 20px;
     width: 100%;
     max-width: 100%;
+    margin-bottom: 16px;
   }
 
   .card-grid {
