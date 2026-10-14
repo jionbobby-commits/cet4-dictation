@@ -7,19 +7,30 @@ const SpeechUtil = (() => {
   let currentAccent = 'en-US'; // 默认美式
   let currentRequestId = 0; // 请求计数器，防止串音
   let lastError = null; // 最后一次错误信息
+  let activePlaybackCancel = null;
+  let pendingVoiceLoad = null;
+
+  function refreshVoices() {
+    try {
+      if ('speechSynthesis' in window) voices = window.speechSynthesis.getVoices() || [];
+    } catch (error) {
+      console.warn('读取系统语音列表失败:', error);
+    }
+    return voices;
+  }
 
   /**
    * 语音诊断信息
    */
   function debugSpeech() {
     const ok = 'speechSynthesis' in window;
-    const voices = ok ? window.speechSynthesis.getVoices() : [];
-    const enVoices = voices.filter(v => v.lang.startsWith('en'));
-    const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
+    const availableVoices = ok ? refreshVoices() : [];
+    const enVoices = availableVoices.filter(v => String(v.lang || '').toLowerCase().startsWith('en'));
+    const zhVoices = availableVoices.filter(v => String(v.lang || '').toLowerCase().startsWith('zh'));
     
     const info = {
       supported: ok,
-      totalVoices: voices.length,
+      totalVoices: availableVoices.length,
       enVoices: enVoices.length,
       zhVoices: zhVoices.length,
       lastError: lastError || '无错误记录',
@@ -35,36 +46,44 @@ const SpeechUtil = (() => {
    * 加载可用语音列表（等待语音列表就绪）
    */
   function loadVoices() {
-    return new Promise((resolve) => {
-      if (!('speechSynthesis' in window)) {
-        console.warn('当前浏览器不支持 Web Speech API');
-        resolve([]);
-        return;
-      }
+    if (!('speechSynthesis' in window)) {
+      console.warn('当前浏览器不支持 Web Speech API');
+      return Promise.resolve([]);
+    }
 
-      // 先尝试获取一次
-      voices = window.speechSynthesis.getVoices();
+    refreshVoices();
+    if (voices.length) return Promise.resolve(voices);
+    if (pendingVoiceLoad) return pendingVoiceLoad;
 
-      // 如果已经有语音了，直接返回
-      if (voices.length > 0) {
-        resolve(voices);
-        return;
-      }
-
-      // 否则等待 onvoiceschanged 事件
-      window.speechSynthesis.onvoiceschanged = () => {
-        voices = window.speechSynthesis.getVoices();
+    const synthesis = window.speechSynthesis;
+    pendingVoiceLoad = new Promise((resolve) => {
+      let settled = false;
+      let pollTimer;
+      let timeout;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearInterval(pollTimer);
+        clearTimeout(timeout);
+        if (synthesis.removeEventListener) synthesis.removeEventListener('voiceschanged', check);
+        else if (synthesis.onvoiceschanged === check) synthesis.onvoiceschanged = null;
+        refreshVoices();
+        pendingVoiceLoad = null;
         resolve(voices);
       };
+      const check = () => {
+        refreshVoices();
+        if (voices.length) finish();
+      };
 
-      // 5 秒后强制 resolve，避免一直卡着
-      setTimeout(() => {
-        if (voices.length === 0) {
-          voices = window.speechSynthesis.getVoices();
-          resolve(voices);
-        }
-      }, 5000);
+      if (synthesis.addEventListener) synthesis.addEventListener('voiceschanged', check);
+      else synthesis.onvoiceschanged = check;
+      // Some mobile engines populate voices without reliably dispatching the event.
+      pollTimer = setInterval(check, 250);
+      timeout = setTimeout(finish, 2500);
+      check();
     });
+    return pendingVoiceLoad;
   }
 
   /**
@@ -76,41 +95,19 @@ const SpeechUtil = (() => {
 
     console.log('可用语音数量:', voices.length, '查找口音:', accentCode);
 
-    const langMap = {
-      'en-US': ['en-US', 'en_US'],
-      'en-GB': ['en-GB', 'en_GB'],
-      'zh-CN': ['zh-CN', 'zh_CN', 'zh-Hans-CN'],
-      'zh-TW': ['zh-TW', 'zh_TW', 'zh-Hant-TW']
-    };
-
-    const codes = langMap[accentCode];
-    if (!codes) {
+    const desired = String(accentCode || '').toLowerCase().replace(/_/g, '-');
+    const baseLanguage = desired.split('-')[0];
+    if (!['en', 'zh'].includes(baseLanguage)) {
       console.warn('未知口音代码:', accentCode);
       return null;
     }
 
-    // 优先匹配 Google 语音（通常最自然）
-    for (const code of codes) {
-      const v = voices.find(v =>
-        v.lang === code &&
-        (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha'))
-      );
-      if (v) {
-        console.log('找到语音(优选):', v.name, v.lang);
-        return v;
-      }
-    }
+    const normalized = voice => String(voice.lang || '').toLowerCase().replace(/_/g, '-');
+    const exact = voices.filter(voice => normalized(voice) === desired);
+    const preferred = exact.find(voice => /google|natural|samantha/i.test(voice.name));
+    const match = preferred || exact[0] || voices.find(voice => normalized(voice).split('-')[0] === baseLanguage);
+    if (match) return match;
 
-    // 其次精确匹配语言代码
-    for (const code of codes) {
-      const v = voices.find(v => v.lang === code);
-      if (v) {
-        console.log('找到语音:', v.name, v.lang);
-        return v;
-      }
-    }
-
-    // 对应语言找不到时，不回退到其他语言，直接返回 null
     console.warn('未找到对应语言的语音:', accentCode);
     return null;
   }
@@ -127,6 +124,8 @@ const SpeechUtil = (() => {
         // 停止之前的播放
         if (onlineAudio) {
           onlineAudio.pause();
+          onlineAudio.removeAttribute('src');
+          onlineAudio.load();
           onlineAudio = null;
         }
 
@@ -163,11 +162,14 @@ const SpeechUtil = (() => {
           reject(e);
         };
 
-        onlineAudio.play().catch(e => {
-          console.warn('在线发音播放失败:', e);
-          if (options.onerror) options.onerror(e);
-          reject(e);
-        });
+        const playResult = onlineAudio.play();
+        if (playResult && typeof playResult.catch === 'function') {
+          playResult.catch(e => {
+            console.warn('在线发音播放失败:', e);
+            if (options.onerror) options.onerror(e);
+            reject(e);
+          });
+        }
       } catch (e) {
         reject(e);
       }
@@ -180,15 +182,39 @@ const SpeechUtil = (() => {
    * @param {object} options - { accent, rate, onend, onerror }
    */
   function speak(text, options = {}) {
-    // 生成新的请求 ID，旧请求自动失效
+    // 结束上一条语音并释放等待中的 Promise，避免连点后队列卡住。
+    stop();
     const requestId = ++currentRequestId;
-    
+
     return new Promise((resolve, reject) => {
+      let settled = false;
+      let fallbackStarted = false;
+      let playbackTimeout;
+      const finish = (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(playbackTimeout);
+        if (activePlaybackCancel === cancel) activePlaybackCancel = null;
+        if (error) reject(error);
+        else resolve();
+      };
+      const cancel = () => finish();
+      activePlaybackCancel = cancel;
+
+      const fallbackOnline = () => {
+        if (fallbackStarted || settled) return;
+        fallbackStarted = true;
+        speakOnline(text, options).then(() => finish()).catch((err) => {
+          if (requestId !== currentRequestId) return finish();
+          lastError = [lastError, `在线发音失败: ${err.message || err.error || '未知错误'}`].filter(Boolean).join(' | ');
+          if (options.onerror) options.onerror(err);
+          finish(err);
+        });
+      };
+
       // 优先用系统语音（国内手机更稳定，不依赖Google服务）
       if ('speechSynthesis' in window) {
         try {
-          window.speechSynthesis.cancel();
-
           const utter = new SpeechSynthesisUtterance(text);
           const accent = options.accent || currentAccent;
           const voice = findVoice(accent);
@@ -204,34 +230,29 @@ const SpeechUtil = (() => {
           utter.pitch = 1;
           utter.volume = 1;
 
-          let finished = false;
-
           utter.onend = () => {
-            if (finished || requestId !== currentRequestId) return;
-            finished = true;
-            if (options.onend) options.onend();
-            resolve();
+            if (requestId !== currentRequestId) return finish();
+            try { if (options.onend) options.onend(); } catch (error) { console.error('语音结束回调失败:', error); }
+            finish();
           };
 
           utter.onerror = (e) => {
-            if (finished || requestId !== currentRequestId) return;
-            finished = true;
+            if (requestId !== currentRequestId) return finish();
             lastError = `系统语音错误: ${e.error || e.message}`;
             console.warn('系统语音失败，尝试在线发音:', e);
-            // 系统语音失败，再试在线发音
-            speakOnline(text, options).then(() => {
-              if (requestId !== currentRequestId) return;
-              resolve();
-            }).catch((err2) => {
-              if (requestId !== currentRequestId) return;
-              lastError += ` | 在线发音失败: ${err2.message}`;
-              if (options.onerror) options.onerror(err2);
-              reject(err2);
-            });
+            fallbackOnline();
           };
 
           // 直接同步调用，不能加 setTimeout，否则浏览器自动播放策略会拦截
           window.speechSynthesis.speak(utter);
+          // 移动端语音引擎偶尔会既不触发 onend 也不触发 onerror；超时后取消并走可见的回退流程。
+          const timeoutMs = Math.max(12000, Math.min(30000, Math.ceil(String(text).length * 500 / Math.max(0.5, utter.rate))));
+          playbackTimeout = setTimeout(() => {
+            if (settled || requestId !== currentRequestId) return;
+            lastError = '系统语音播放超时';
+            try { window.speechSynthesis.cancel(); } catch (error) { console.warn('取消超时语音失败:', error); }
+            fallbackOnline();
+          }, timeoutMs);
           
           return;
         } catch (err) {
@@ -240,14 +261,7 @@ const SpeechUtil = (() => {
       }
 
       // 系统语音不可用，用在线发音
-      speakOnline(text, options).then(() => {
-        if (requestId !== currentRequestId) return;
-        resolve();
-      }).catch((err) => {
-        if (requestId !== currentRequestId) return;
-        if (options.onerror) options.onerror(err);
-        reject(err);
-      });
+      fallbackOnline();
     });
   }
 
@@ -255,9 +269,19 @@ const SpeechUtil = (() => {
    * 停止朗读
    */
   function stop() {
+    currentRequestId++;
     if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+      try { window.speechSynthesis.cancel(); } catch (error) { console.warn('停止系统语音失败:', error); }
     }
+    if (onlineAudio) {
+      onlineAudio.pause();
+      onlineAudio.removeAttribute('src');
+      onlineAudio.load();
+      onlineAudio = null;
+    }
+    const cancel = activePlaybackCancel;
+    activePlaybackCancel = null;
+    if (cancel) cancel();
   }
 
   /**
@@ -285,7 +309,7 @@ const SpeechUtil = (() => {
    * 获取当前可用语音列表（调试用）
    */
   function getVoiceList() {
-    if (!voices.length) voices = window.speechSynthesis.getVoices();
+    if (!voices.length) refreshVoices();
     return voices;
   }
 

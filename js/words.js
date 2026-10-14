@@ -68,9 +68,20 @@ const Words = (() => {
    */
   async function updateWord(id, data) {
     const word = wordList.find(w => w.id === id);
-    if (!word) return;
-    Object.assign(word, data);
-    await dbPut(STORES.words, word);
+    if (!word) return false;
+    const en = (data.en ?? word.en).trim().toLowerCase();
+    if (!en || wordList.some(item => item.id !== id && item.en.toLowerCase() === en)) return false;
+    const updated = {
+      ...word,
+      ...data,
+      en,
+      cn: (data.cn ?? word.cn).trim(),
+      phonetic: (data.phonetic ?? word.phonetic ?? '').trim(),
+      example: (data.example ?? word.example ?? '').trim()
+    };
+    await dbPut(STORES.words, updated);
+    Object.assign(word, updated);
+    return true;
   }
 
   /**

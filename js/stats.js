@@ -27,6 +27,9 @@ const Stats = (() => {
    */
   async function recordSession(result) {
     const today = todayStr();
+    const words = (result.words || []).map(word => result.taskDate
+      ? { ...word, taskDate: result.taskDate }
+      : word);
 
     // 查找今天是否已有记录
     const allRecords = await dbGetByIndex(STORES.records, 'date', today);
@@ -39,7 +42,7 @@ const Stats = (() => {
       existing.wrong = (existing.wrong || 0) + result.wrong;
       // 合并单词列表
       existing.words = existing.words || [];
-      existing.words = existing.words.concat(result.words || []);
+      existing.words = existing.words.concat(words);
       existing.updatedAt = Date.now();
       await dbPut(STORES.records, existing);
       return existing;
@@ -50,7 +53,7 @@ const Stats = (() => {
         total: result.total,
         right: result.right,
         wrong: result.wrong,
-        words: result.words || [],
+        words,
         createdAt: Date.now()
       });
       return { id, date: today, ...result };
