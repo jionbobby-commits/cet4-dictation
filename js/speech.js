@@ -161,20 +161,72 @@ const SpeechUtil = (() => {
     const requestId = ++currentRequestId;
     
     return new Promise((resolve, reject) => {
-      // 先尝试用在线发音（更稳定，不依赖系统语音包）
+      // 优先用系统语音（国内更稳定，不依赖 Google 服务）
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+
+          const utter = new SpeechSynthesisUtterance(text);
+          const accent = options.accent || currentAccent;
+          const voice = findVoice(accent);
+
+          if (voice) {
+            utter.voice = voice;
+            utter.lang = voice.lang;
+          } else {
+            utter.lang = accent;
+          }
+
+          utter.rate = options.rate || 0.9;
+          utter.pitch = 1;
+          utter.volume = 1;
+
+          let finished = false;
+
+          utter.onend = () => {
+            if (finished || requestId !== currentRequestId) return;
+            finished = true;
+            if (options.onend) options.onend();
+            resolve();
+          };
+
+          utter.onerror = (e) => {
+            if (finished || requestId !== currentRequestId) return;
+            finished = true;
+            console.warn('系统语音失败，尝试在线发音:', e);
+            // 系统语音失败，再试在线发音
+            speakOnline(text, options).then(() => {
+              if (requestId !== currentRequestId) return;
+              resolve();
+            }).catch((err2) => {
+              if (requestId !== currentRequestId) return;
+              if (options.onerror) options.onerror(err2);
+              reject(err2);
+            });
+          };
+
+          setTimeout(() => {
+            if (requestId !== currentRequestId) return;
+            window.speechSynthesis.speak(utter);
+          }, 100);
+          
+          return;
+        } catch (err) {
+          console.warn('系统语音出错，尝试在线发音:', err);
+        }
+      }
+
+      // 系统语音不可用，用在线发音
       speakOnline(text, options).then(() => {
-        // 检查是否还是当前请求
         if (requestId !== currentRequestId) return;
         resolve();
       }).catch((err) => {
         if (requestId !== currentRequestId) return;
-        console.warn('在线发音失败，尝试系统语音:', err);
-        
-        // 在线发音失败，再试系统语音
-        if (!('speechSynthesis' in window)) {
-          reject(new Error('语音朗读不可用'));
-          return;
-        }
+        if (options.onerror) options.onerror(err);
+        reject(err);
+      });
+    });
+  }
 
         try {
           window.speechSynthesis.cancel();
