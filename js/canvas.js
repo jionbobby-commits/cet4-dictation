@@ -200,9 +200,10 @@ const DrawCanvas = (() => {
   }
 
   function setPenSize(size) {
-    penSize = size;
+    // 限制最大笔粗12px，太粗字母会连在一起影响识别
+    penSize = Math.min(size, 12);
     if (ctx) {
-      ctx.lineWidth = size;
+      ctx.lineWidth = penSize;
     }
   }
 

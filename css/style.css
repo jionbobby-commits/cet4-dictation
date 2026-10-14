@@ -593,13 +593,15 @@ ul {
   margin-top: var(--space-lg);
   padding: var(--space-lg);
   border-radius: var(--radius-lg);
-  background: var(--color-sidebar);
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline);
   text-align: center;
   animation: expressiveIn 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .result-panel.wrong {
   background: #fde8e8;
+  border-color: var(--md-sys-color-error);
 }
 
 .result-title {
@@ -792,6 +794,7 @@ ul {
     height: auto !important;
     flex-direction: row !important;
     padding: 8px 0 !important;
+    padding-top: calc(8px + env(safe-area-inset-top)) !important;
     overflow-x: visible !important;
     background: var(--sage-white) !important;
     position: fixed !important;
@@ -805,10 +808,10 @@ ul {
   }
 
   .app-main {
-    padding-top: 72px !important;
+    padding-top: calc(72px + env(safe-area-inset-top)) !important;
     padding-left: 16px !important;
     padding-right: 16px !important;
-    padding-bottom: 24px !important;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important;
   }
 
   .sidebar-logo {

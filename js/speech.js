@@ -6,6 +6,30 @@ const SpeechUtil = (() => {
   let voices = [];
   let currentAccent = 'en-US'; // 默认美式
   let currentRequestId = 0; // 请求计数器，防止串音
+  let lastError = null; // 最后一次错误信息
+
+  /**
+   * 语音诊断信息
+   */
+  function debugSpeech() {
+    const ok = 'speechSynthesis' in window;
+    const voices = ok ? window.speechSynthesis.getVoices() : [];
+    const enVoices = voices.filter(v => v.lang.startsWith('en'));
+    const zhVoices = voices.filter(v => v.lang.startsWith('zh'));
+    
+    const info = {
+      supported: ok,
+      totalVoices: voices.length,
+      enVoices: enVoices.length,
+      zhVoices: zhVoices.length,
+      lastError: lastError || '无错误记录',
+      enVoiceList: enVoices.map(v => `${v.name} (${v.lang})`).slice(0, 5),
+      zhVoiceList: zhVoices.map(v => `${v.name} (${v.lang})`).slice(0, 5)
+    };
+    
+    console.log('语音诊断:', info);
+    return info;
+  }
 
   /**
    * 加载可用语音列表（等待语音列表就绪）
@@ -107,20 +131,19 @@ const SpeechUtil = (() => {
         }
 
         const accent = options.accent || currentAccent;
-        let lang;
+        let type;
         if (accent === 'en-GB') {
-          lang = 'en-GB';
-        } else if (accent === 'zh-CN') {
-          lang = 'zh-CN';
-        } else if (accent === 'zh-TW') {
-          lang = 'zh-TW';
+          type = 1; // 英式
+        } else if (accent === 'zh-CN' || accent === 'zh-TW') {
+          type = 2; // 中文
         } else {
-          lang = 'en';
+          type = 2; // 默认美式
         }
         
-        // Google Translate TTS 接口
-        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&client=tw-ob`;
+        // 有道词典 TTS 接口（国内可访问，免费，无需API key）
+        const url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&type=${type}`;
         
+        console.log('使用有道TTS:', url);
         onlineAudio = new Audio(url);
         
         // 慢速播放
@@ -193,6 +216,7 @@ const SpeechUtil = (() => {
           utter.onerror = (e) => {
             if (finished || requestId !== currentRequestId) return;
             finished = true;
+            lastError = `系统语音错误: ${e.error || e.message}`;
             console.warn('系统语音失败，尝试在线发音:', e);
             // 系统语音失败，再试在线发音
             speakOnline(text, options).then(() => {
@@ -200,15 +224,14 @@ const SpeechUtil = (() => {
               resolve();
             }).catch((err2) => {
               if (requestId !== currentRequestId) return;
+              lastError += ` | 在线发音失败: ${err2.message}`;
               if (options.onerror) options.onerror(err2);
               reject(err2);
             });
           };
 
-          setTimeout(() => {
-            if (requestId !== currentRequestId) return;
-            window.speechSynthesis.speak(utter);
-          }, 100);
+          // 直接同步调用，不能加 setTimeout，否则浏览器自动播放策略会拦截
+          window.speechSynthesis.speak(utter);
           
           return;
         } catch (err) {
@@ -278,6 +301,7 @@ const SpeechUtil = (() => {
     setAccent,
     getAccent,
     isSupported,
-    getVoiceList
+    getVoiceList,
+    debugSpeech
   };
 })();

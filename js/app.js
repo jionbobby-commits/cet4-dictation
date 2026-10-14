@@ -1158,19 +1158,26 @@ function preprocessCanvas(sourceCanvas) {
   const cropW = maxX - minX;
   const cropH = maxY - minY;
 
-  // 第二步：裁剪并放大4倍（最优比例，太大太小都不好）
-  const scale = 4;
+  // 第二步：按最长边缩放到500px（OCR最优识别尺寸）
+  const targetSize = 500;
+  const longestSide = Math.max(cropW, cropH);
+  const scale = Math.min(targetSize / longestSide, 5); // 最大放大5倍，最小1倍
+  
+  const newW = Math.round(cropW * scale);
+  const newH = Math.round(cropH * scale);
   const newCanvas = document.createElement('canvas');
-  newCanvas.width = cropW * scale;
-  newCanvas.height = cropH * scale;
+  newCanvas.width = newW;
+  newCanvas.height = newH;
   const newCtx = newCanvas.getContext('2d');
 
-  // 白色背景
+  // 不透明白色背景
   newCtx.fillStyle = '#ffffff';
-  newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+  newCtx.fillRect(0, 0, newW, newH);
 
-  // 绘制裁剪后的内容（放大）
-  newCtx.drawImage(sourceCanvas, minX, minY, cropW, cropH, 0, 0, newCanvas.width, newCanvas.height);
+  // 绘制裁剪后的内容（平滑缩放）
+  newCtx.imageSmoothingEnabled = true;
+  newCtx.imageSmoothingQuality = 'high';
+  newCtx.drawImage(sourceCanvas, minX, minY, cropW, cropH, 0, 0, newW, newH);
 
   // 第三步：二值化，黑白分明
   const newImageData = newCtx.getImageData(0, 0, newCanvas.width, newCanvas.height);
