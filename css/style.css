@@ -594,8 +594,8 @@ ul {
   padding: var(--space-lg);
   border-radius: var(--radius-lg);
   background: var(--md-sys-color-surface);
-  border: 2px solid #B8C9BC;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid var(--md-sys-color-outline);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   text-align: center;
   animation: expressiveIn 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
