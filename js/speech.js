@@ -161,20 +161,8 @@ const SpeechUtil = (() => {
     const requestId = ++currentRequestId;
     
     return new Promise((resolve, reject) => {
-      // 优先用在线发音（HTML音频，Chrome更兼容）
-      speakOnline(text, options).then(() => {
-        if (requestId !== currentRequestId) return;
-        resolve();
-      }).catch((err) => {
-        if (requestId !== currentRequestId) return;
-        console.warn('在线发音失败，尝试系统语音:', err);
-        
-        // 在线发音失败，再试系统语音
-        if (!('speechSynthesis' in window)) {
-          reject(new Error('语音朗读不可用'));
-          return;
-        }
-
+      // 优先用系统语音（国内手机更稳定，不依赖Google服务）
+      if ('speechSynthesis' in window) {
         try {
           window.speechSynthesis.cancel();
 
@@ -205,19 +193,37 @@ const SpeechUtil = (() => {
           utter.onerror = (e) => {
             if (finished || requestId !== currentRequestId) return;
             finished = true;
-            if (options.onerror) options.onerror(e);
-            reject(e);
+            console.warn('系统语音失败，尝试在线发音:', e);
+            // 系统语音失败，再试在线发音
+            speakOnline(text, options).then(() => {
+              if (requestId !== currentRequestId) return;
+              resolve();
+            }).catch((err2) => {
+              if (requestId !== currentRequestId) return;
+              if (options.onerror) options.onerror(err2);
+              reject(err2);
+            });
           };
 
           setTimeout(() => {
             if (requestId !== currentRequestId) return;
             window.speechSynthesis.speak(utter);
           }, 100);
-        } catch (err2) {
-          if (requestId !== currentRequestId) return;
-          if (options.onerror) options.onerror(err2);
-          reject(err2);
+          
+          return;
+        } catch (err) {
+          console.warn('系统语音出错，尝试在线发音:', err);
         }
+      }
+
+      // 系统语音不可用，用在线发音
+      speakOnline(text, options).then(() => {
+        if (requestId !== currentRequestId) return;
+        resolve();
+      }).catch((err) => {
+        if (requestId !== currentRequestId) return;
+        if (options.onerror) options.onerror(err);
+        reject(err);
       });
     });
   }
