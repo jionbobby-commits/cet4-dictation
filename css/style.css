@@ -744,9 +744,12 @@ ul {
     width: 100%;
     height: auto;
     flex-direction: row;
-    padding: 12px;
+    padding: 8px 12px;
     overflow-x: auto;
-    background: #f3edf7;
+    background: var(--sage-primary-light);
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
 
   .sidebar-logo {
@@ -756,30 +759,66 @@ ul {
   .sidebar-nav {
     flex-direction: row;
     padding: 0;
-    gap: 8px;
+    gap: 4px;
   }
 
   .sidebar-item {
     flex-shrink: 0;
-    padding: 12px 18px;
-    border-radius: 24px;
+    padding: 10px 14px;
+    border-radius: 20px;
+    flex-direction: column;
+    gap: 4px;
   }
 
   .sidebar-text {
-    display: none;
+    display: block;
+    font-size: 11px;
   }
 
   .app-main {
-    padding: 20px;
+    padding: 16px;
   }
 
   .card-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 12px;
   }
 
   .stat-value {
-    font-size: 20px;
+    font-size: 22px;
+  }
+
+  /* 计划卡片手机端 */
+  .plan-list {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  /* 统计卡片手机端 */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 表单行手机端 */
+  .form-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* 日期范围选择器手机端 */
+  .date-range-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* 顶部统计手机端 */
+  .plan-stats {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .stat-item {
+    min-width: 80px;
   }
 }
 
