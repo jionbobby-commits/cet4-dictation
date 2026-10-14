@@ -930,8 +930,22 @@ ul {
   /* 听写区域 */
   .speech-buttons {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 12px;
     justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  /* 底部操作按钮 */
+  .dict-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .dict-actions .btn {
+    padding: 12px 20px;
   }
 }
 
