@@ -1233,13 +1233,15 @@ ul {
   color: #757575;
 }
 
-/* ========== 侧边栏圆角优化 ========== */
-.sidebar {
-  margin: 16px;
-  border-radius: 24px;
-  height: calc(100vh - 32px);
-  display: flex;
-  flex-direction: column;
+/* ========== 侧边栏圆角优化（仅桌面端） ========== */
+@media (min-width: 769px) {
+  .sidebar {
+    margin: 16px;
+    border-radius: 24px;
+    height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .sidebar-item {
