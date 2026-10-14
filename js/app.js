@@ -821,6 +821,12 @@ function loadCurrentWord() {
   d.currentWord = word;
   d.submitted = false;
 
+  // 重置提示显示和按钮
+  document.getElementById('hintDisplay').classList.add('hidden');
+  document.getElementById('btnHintCn').disabled = false;
+  document.getElementById('btnHintLen').disabled = false;
+  document.getElementById('btnHintFirst').disabled = false;
+
   // 更新进度
   let progressText = `第 ${d.index + 1} / ${d.total} 题`;
   if (d.dayInfo) {
@@ -1302,6 +1308,41 @@ async function nextWord() {
 }
 
 /**
+ * 显示中文释义提示
+ */
+function showHintCn() {
+  const word = state.dictation.currentWord;
+  if (!word) return;
+  const display = document.getElementById('hintDisplay');
+  display.textContent = `中文释义：${word.cn}`;
+  display.classList.remove('hidden');
+}
+
+/**
+ * 显示单词长度提示
+ */
+function showHintLen() {
+  const word = state.dictation.currentWord;
+  if (!word) return;
+  const display = document.getElementById('hintDisplay');
+  const len = word.en.length;
+  display.textContent = `单词长度：${len} 个字母`;
+  display.classList.remove('hidden');
+}
+
+/**
+ * 显示首字母提示
+ */
+function showHintFirst() {
+  const word = state.dictation.currentWord;
+  if (!word) return;
+  const display = document.getElementById('hintDisplay');
+  const first = word.en[0];
+  display.textContent = `首字母：${first}`;
+  display.classList.remove('hidden');
+}
+
+/**
  * 跳过当前题
  */
 function skipWord() {
@@ -1457,6 +1498,11 @@ function bindEvents() {
     if (state.dictation.submitted) return;
     skipWord();
   });
+
+  // 渐进提示按钮
+  document.getElementById('btnHintCn').addEventListener('click', showHintCn);
+  document.getElementById('btnHintLen').addEventListener('click', showHintLen);
+  document.getElementById('btnHintFirst').addEventListener('click', showHintFirst);
 
   // 手写板按钮
   document.getElementById('btnClear').addEventListener('click', () => DrawCanvas.clear());
