@@ -572,11 +572,42 @@ async function testSpeech() {
   box.innerHTML = results.join('');
 }
 
+// Tesseract worker 单例，避免重复初始化
+let tesseractWorker = null;
+let isRecognizing = false; // 防重复点击锁
+
+/**
+ * 获取或创建 Tesseract worker（单例模式）
+ */
+async function getTesseractWorker(onProgress) {
+  if (tesseractWorker) return tesseractWorker;
+  
+  tesseractWorker = await Tesseract.createWorker('eng', 1, {
+    logger: m => {
+      if (onProgress) onProgress(m);
+    }
+  });
+  
+  // 配置识别参数
+  await tesseractWorker.setParameters({
+    tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    tessedit_pageseg_mode: '7',  // 单行文本模式，适合单词
+  });
+  
+  return tesseractWorker;
+}
+
 /**
  * 识别手写板上的英文单词，结果自动填入输入框
- * 优化：图片预处理 + 参数调优
+ * 优化：单例 worker + 防重复点击 + 判题公平（不自动替换答案）
  */
 async function recognizeHandwriting() {
+  // 防重复点击
+  if (isRecognizing) {
+    showToast('正在识别中，请稍候...');
+    return;
+  }
+
   if (typeof Tesseract === 'undefined') {
     showToast('识别库加载失败，请检查网络后刷新页面');
     return;
@@ -590,86 +621,69 @@ async function recognizeHandwriting() {
   const btn = document.getElementById('btnRecognize');
   const originalText = btn.textContent;
   btn.disabled = true;
+  isRecognizing = true;
 
   try {
-    btn.innerHTML = '<span class="m3-dots"><span></span><span></span><span></span></span> 识别中...';
+    btn.innerHTML = '<span class="m3-dots"><span></span><span></span><span></span></span> 正在加载识别引擎...';
     const canvas = document.getElementById('drawCanvas');
 
     // 预处理图片：放大 + 二值化，提高识别率
     const processedCanvas = preprocessCanvas(canvas);
 
+    // 获取或创建 worker（首次会下载语言包）
+    const worker = await getTesseractWorker((m) => {
+      if (m.status === 'recognizing text') {
+        btn.innerHTML = `<span class="m3-dots"><span></span><span></span><span></span></span> 识别中 ${Math.round(m.progress * 100)}%`;
+      } else if (m.status === 'loading language traineddata') {
+        btn.innerHTML = '<span class="m3-dots"><span></span><span></span><span></span></span> 首次加载语言包...';
+      }
+    });
+
     btn.innerHTML = '<span class="m3-dots"><span></span><span></span><span></span></span> 识别中...';
 
-    // 调用 Tesseract，优化参数
-    const result = await Tesseract.recognize(
-      processedCanvas,
-      'eng',
-      {
-        logger: m => {
-          if (m.status === 'recognizing text') {
-            btn.innerHTML = `<span class="m3-dots"><span></span><span></span><span></span></span> ${Math.round(m.progress * 100)}%`;
-          } else if (m.status === 'loading language traineddata') {
-            btn.innerHTML = '<span class="m3-dots"><span></span><span></span><span></span></span> 下载语言包...';
-          }
-        },
-        // 只识别英文字母，提高准确率
-        tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-        tessedit_pageseg_mode: '7',  // 单行文本模式，更适合单词
-      }
+    // 执行识别（加 10 秒超时保护）
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('识别超时')), 10000)
     );
+    const result = await Promise.race([
+      worker.recognize(processedCanvas),
+      timeoutPromise
+    ]);
 
     const text = (result.data.text || '').trim().toLowerCase().replace(/[^a-z]/g, '');
-    console.log('原始识别结果:', text);
+    console.log('识别结果:', text);
 
-    // 智能匹配修正（保守策略，只在高度相似时才修正，避免改错）
-    const currentWord = state.dictation.currentWord;
-    let finalText = text;
-    
-    if (currentWord && text) {
-      const target = currentWord.en.toLowerCase();
-      const similarity = calculateSimilarity(text, target);
-      console.log(`与目标单词 "${target}" 的相似度: ${Math.round(similarity * 100)}%`);
+    if (text) {
+      // 填入输入框，提示用户核对（不自动替换答案，保证判题公平）
+      document.getElementById('txtAnswer').value = text;
       
-      let shouldAutoCorrect = false;
-      
-      // 策略1：编辑距离相似度 ≥ 65%（比较严格，避免改错）
-      if (similarity >= 0.65) shouldAutoCorrect = true;
-      
-      // 策略2：识别结果和目标单词前2个字母相同，且长度差≤2
-      if (text.length >= 2 && target.length >= 2 && 
-          text.substring(0, 2) === target.substring(0, 2) &&
-          Math.abs(text.length - target.length) <= 2) {
-        shouldAutoCorrect = true;
-      }
-      
-      // 策略3：识别结果和目标单词后2个字母相同，且长度差≤2
-      if (text.length >= 2 && target.length >= 2 && 
-          text.substring(text.length - 2) === target.substring(target.length - 2) &&
-          Math.abs(text.length - target.length) <= 2) {
-        shouldAutoCorrect = true;
-      }
-      
-      if (shouldAutoCorrect) {
-        finalText = target;
-        showToast(`识别结果：${text} → 已修正为：${target}`);
+      // 提示相似度参考，但不自动修改
+      const currentWord = state.dictation.currentWord;
+      if (currentWord) {
+        const target = currentWord.en.toLowerCase();
+        const similarity = calculateSimilarity(text, target);
+        if (similarity >= 0.6) {
+          showToast(`识别结果：${text}，与目标词相似度 ${Math.round(similarity * 100)}%，请核对后提交`);
+        } else {
+          showToast(`识别结果：${text}，请核对后提交`);
+        }
       } else {
         showToast(`识别结果：${text}，请核对后提交`);
       }
-    } else if (text) {
-      showToast(`识别结果：${text}，请核对后提交`);
-    }
-
-    if (finalText) {
-      document.getElementById('txtAnswer').value = finalText;
     } else {
       showToast('识别失败，请直接打字输入');
     }
   } catch (e) {
     console.error('识别出错:', e);
-    showToast('识别失败，请直接打字输入');
+    if (e.message === '识别超时') {
+      showToast('识别超时，请直接打字输入');
+    } else {
+      showToast('识别失败，请直接打字输入');
+    }
   } finally {
     btn.disabled = false;
     btn.textContent = originalText;
+    isRecognizing = false;
   }
 }
 
