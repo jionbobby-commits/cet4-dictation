@@ -758,13 +758,14 @@ ul {
     width: 100% !important;
     height: auto !important;
     flex-direction: row !important;
-    padding: 8px 12px !important;
-    overflow-x: auto !important;
-    background: var(--sage-primary-light) !important;
+    padding: 8px 0 !important;
+    overflow-x: visible !important;
+    background: var(--sage-white) !important;
     position: sticky !important;
     top: 0 !important;
     z-index: 100 !important;
     flex-shrink: 0 !important;
+    border-bottom: 1px solid var(--border-light);
   }
 
   .sidebar-logo {
@@ -782,18 +783,35 @@ ul {
   .sidebar-item {
     flex: 1;
     min-width: 0;
-    padding: 10px 4px;
-    border-radius: 16px;
+    padding: 8px 4px;
+    border-radius: 0;
     flex-direction: column;
     gap: 4px;
     justify-content: center;
     align-items: center;
+    background: transparent;
+  }
+
+  .sidebar-item.active {
+    background: transparent;
+  }
+
+  .sidebar-item.active .sidebar-icon {
+    background: var(--sage-primary-light);
+    border-radius: 20px;
+    padding: 6px 16px;
   }
 
   .sidebar-text {
     display: block;
     font-size: 11px;
     white-space: nowrap;
+    font-weight: 500;
+  }
+
+  .sidebar-item.active .sidebar-text {
+    color: var(--sage-primary-dark);
+    font-weight: 600;
   }
 
   .app-main {
