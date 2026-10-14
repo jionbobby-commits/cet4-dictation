@@ -935,16 +935,26 @@ ul {
     margin-bottom: 16px;
   }
 
-  /* 底部操作按钮 */
-  .dict-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 16px;
-    flex-wrap: wrap;
-    justify-content: center;
+  /* 所有按钮组统一间距 */
+  .btn + .btn,
+  .btn-row .btn + .btn {
+    margin-left: 12px;
   }
 
-  .dict-actions .btn {
+  /* 所有按钮容器统一间距 */
+  .import-actions,
+  .word-actions,
+  .dict-actions,
+  .speech-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 16px;
+    margin-bottom: 16px;
+  }
+
+  .btn {
     padding: 12px 20px;
   }
 }
