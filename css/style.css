@@ -774,18 +774,20 @@ ul {
   .sidebar-nav {
     flex-direction: row;
     padding: 0;
-    gap: 4px;
+    gap: 0;
     width: 100%;
+    justify-content: space-around;
   }
 
   .sidebar-item {
-    flex-shrink: 1;
+    flex: 1;
     min-width: 0;
-    padding: 10px 12px;
-    border-radius: 20px;
+    padding: 10px 4px;
+    border-radius: 16px;
     flex-direction: column;
     gap: 4px;
     justify-content: center;
+    align-items: center;
   }
 
   .sidebar-text {
