@@ -228,52 +228,6 @@ const SpeechUtil = (() => {
     });
   }
 
-        try {
-          window.speechSynthesis.cancel();
-
-          const utter = new SpeechSynthesisUtterance(text);
-          const accent = options.accent || currentAccent;
-          const voice = findVoice(accent);
-
-          if (voice) {
-            utter.voice = voice;
-            utter.lang = voice.lang;
-          } else {
-            utter.lang = accent;
-          }
-
-          utter.rate = options.rate || 0.9;
-          utter.pitch = 1;
-          utter.volume = 1;
-
-          let finished = false;
-
-          utter.onend = () => {
-            if (finished || requestId !== currentRequestId) return;
-            finished = true;
-            if (options.onend) options.onend();
-            resolve();
-          };
-
-          utter.onerror = (e) => {
-            if (finished || requestId !== currentRequestId) return;
-            finished = true;
-            if (options.onerror) options.onerror(e);
-            reject(e);
-          };
-
-          setTimeout(() => {
-            if (requestId !== currentRequestId) return;
-            window.speechSynthesis.speak(utter);
-          }, 150);
-        } catch (err) {
-          if (requestId !== currentRequestId) return;
-          reject(err);
-        }
-      });
-    });
-  }
-
   /**
    * 停止朗读
    */
