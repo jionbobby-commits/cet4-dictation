@@ -227,7 +227,6 @@ const DailyPlan = (() => {
     const listEl = document.getElementById('planList');
     if (!listEl) return;
 
-    listEl.innerHTML = '';
     const today = getTodayStr();
 
     // 根据日期范围过滤
@@ -235,6 +234,7 @@ const DailyPlan = (() => {
     const filteredPlans = allPlans.filter(p => p.date >= start && p.date <= end);
 
     // 统计完成情况
+    const fragment = document.createDocumentFragment();
     filteredPlans.forEach(plan => {
       const card = document.createElement('article');
       card.className = 'plan-day-card';
@@ -262,8 +262,10 @@ const DailyPlan = (() => {
       // 点击卡片跳转到听写页面并开始当天听写
       card.querySelector('.plan-day-open').addEventListener('click', () => startDictationForDate(plan.date));
 
-      listEl.appendChild(card);
+      fragment.appendChild(card);
     });
+
+    listEl.replaceChildren(fragment);
 
     // 更新统计数据
     updatePlanStats(summarizePlans(filteredPlans));
