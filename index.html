@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4f46e5">
+  <title>CET-4 Dictation - 英语四级听写助手</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- 左侧边栏导航 -->
+    <aside class="sidebar">
+      <div class="sidebar-logo" style="text-align:center;padding:0 16px;">单词听写</div>
+      <nav class="sidebar-nav" id="tabNav">
+        <button class="sidebar-item active" data-tab="home">
+          <span class="sidebar-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </span>
+          <span class="sidebar-text">首页</span>
+        </button>
+        <button class="sidebar-item" data-tab="dictation">
+          <span class="sidebar-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </span>
+          <span class="sidebar-text">听写</span>
+        </button>
+        <button class="sidebar-item" data-tab="wrong">
+          <span class="sidebar-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          </span>
+          <span class="sidebar-text">错题本</span>
+        </button>
+        <button class="sidebar-item" data-tab="words">
+          <span class="sidebar-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+          </span>
+          <span class="sidebar-text">单词</span>
+        </button>
+        <button class="sidebar-item" data-tab="stats">
+          <span class="sidebar-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="20" x2="12" y2="10"/>
+              <line x1="18" y1="20" x2="18" y2="4"/>
+              <line x1="6" y1="20" x2="6" y2="16"/>
+            </svg>
+          </span>
+          <span class="sidebar-text">统计</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="app-main">
+      <!-- 顶部波浪装饰线 -->
+      <div class="top-wave">
+        <svg viewBox="0 0 1200 40" preserveAspectRatio="none">
+          <path d="M0,20 Q150,5 300,20 T600,20 T900,20 T1200,20" 
+                fill="none" stroke="#DEE5D2" stroke-width="2" opacity="0.6"/>
+        </svg>
+      </div>
+    <!-- ========== 首页 ========== -->
+    <section id="tab-home" class="tab-panel active">
+      <div class="card-grid">
+        <div class="stat-card">
+          <div class="stat-label">今日计划</div>
+          <div class="stat-value" id="statTodayPlan">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">今日已完成</div>
+          <div class="stat-value" id="statTodayDone">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">今日正确率</div>
+          <div class="stat-value" id="statTodayAcc">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">累计词汇</div>
+          <div class="stat-value" id="statTotalWords">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">错题数量</div>
+          <div class="stat-value" id="statWrongCount">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">连续学习</div>
+          <div class="stat-value" id="statStreak">0 天</div>
+        </div>
+      </div>
+
+      <!-- 今日计划卡片（点击直接开始听写） -->
+      <div class="card" id="todayPlanCard">
+        <h3 style="font-size:18px;margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          单词听写
+        </h3>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:14px;color:#5A6B4E;">选择天数：</label>
+          <select id="selDayPicker" style="padding:12px 20px;border-radius:16px;border:1px solid #DEE5D2;min-width:360px;background:#F9FAEF;font-size:15px;">
+            <option value="-1">今天（第X天）</option>
+          </select>
+        </div>
+        <div id="todayPlanInfo" class="empty-tip" style="font-size:16px;">加载中...</div>
+        <div id="todayPlanBtn" style="margin-top:12px;display:none;">
+          <button class="btn btn-primary btn-lg" style="width:100%;font-size:16px;padding:14px;" id="btnTodayDictation">开始听写 →</button>
+        </div>
+      </div>
+
+      <div class="home-actions">
+        <button class="btn btn-secondary" id="btnReviewWrong">复习错词 ( <span id="homeWrongCount">0</span> )</button>
+      </div>
+
+      <div class="card recent-record">
+        <h3>最近学习记录</h3>
+        <ul id="recentList" class="simple-list">
+          <li class="empty-tip">暂无记录，开始第一次听写吧</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ========== 听写页 ========== -->
+    <section id="tab-dictation" class="tab-panel">
+      <!-- 听写设置 -->
+      <div class="card" id="dictSetup">
+        <h3>听写设置</h3>
+        <div class="form-row">
+          <label>模式：</label>
+          <select id="selMode">
+            <option value="listen2en">听英文 → 写英文</option>
+            <option value="listen2en_random">听英文 → 写英文（随机）</option>
+            <option value="listen2cn">听中文 → 写英文</option>
+            <option value="see2cn">看英文 → 写中文</option>
+            <option value="wrong">错词重练</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>语音：</label>
+          <select id="selAccent">
+            <option value="en-US">美式英语</option>
+            <option value="en-GB">英式英语</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>每词播放次数：</label>
+          <input type="number" id="inputPlayTimes" value="2" min="1" max="5" style="width:60px">
+        </div>
+        <div class="form-row">
+          <label>单词数量：</label>
+          <input type="number" id="inputWordCount" value="12" min="1" max="200" style="width:100px;padding:10px 14px;">
+        </div>
+        <button class="btn btn-primary" id="btnBegin">开始听写</button>
+        <button class="btn btn-secondary" id="btnTestSpeech">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+          测试语音
+        </button>
+        <div id="speechDiagnose" class="diagnose-box hidden"></div>
+      </div>
+
+      <!-- 听写进行中 -->
+      <div id="dictPlaying" class="hidden">
+        <!-- 进度条 -->
+        <div class="progress-bar-wrap">
+          <div class="progress-text" id="progressText">第 0 / 0 题</div>
+          <div class="progress-bar">
+            <svg class="wavy-progress" viewBox="0 0 1000 32" preserveAspectRatio="none">
+              <!-- 未完成部分：水平直线 -->
+              <line id="progressTrackLine" x1="0" y1="16" x2="1000" y2="16" 
+                    stroke="#DEE5D2" stroke-width="3.5" stroke-linecap="round"/>
+              
+              <!-- 已完成部分：波浪（裁剪到进度宽度） -->
+              <clipPath id="progressClip">
+                <rect id="progressClipRect" x="0" y="0" width="0" height="32"/>
+              </clipPath>
+              <g clip-path="url(#progressClip)">
+                <path id="progressWavy" 
+                      d="M0,16 C20,4 60,28 80,16 C100,4 140,28 160,16 C180,4 220,28 240,16 C260,4 300,28 320,16 C340,4 380,28 400,16 C420,4 460,28 480,16 C500,4 540,28 560,16 C580,4 620,28 640,16 C660,4 700,28 720,16 C740,4 780,28 800,16 C820,4 860,28 880,16 C900,4 940,28 960,16 C980,4 1020,28 1040,16"
+                      fill="none" stroke="#5A6B4E" stroke-width="3.5" stroke-linecap="round"/>
+              </g>
+
+              <!-- 交界处竖直分界线 -->
+              <line id="progressDivider" x1="0" y1="7" x2="0" y2="25" 
+                    stroke="#5A6B4E" stroke-width="1.5" stroke-linecap="round" opacity="0"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- 发音控制区 -->
+        <div class="speech-area">
+          <div class="word-hint" id="wordHint">点击播放开始听写</div>
+          <div class="speech-buttons">
+            <button class="btn btn-primary speech-btn" id="btnPlay" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              </svg>
+              播放
+            </button>
+            <button class="btn btn-secondary" id="btnSlow" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              慢速
+            </button>
+            <button class="btn btn-secondary" id="btnReplay" disabled>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+              </svg>
+              重播
+            </button>
+          </div>
+        </div>
+
+        <!-- 手写板 -->
+        <div class="canvas-wrap">
+          <canvas id="drawCanvas"></canvas>
+          <div class="canvas-toolbar">
+            <button class="btn btn-sm" id="btnClear">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+              清空
+            </button>
+            <button class="btn btn-sm" id="btnUndo">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 14 4 9 9 4"/>
+                <path d="M20 20H4a2 2 0 0 1-2-2V7"/>
+              </svg>
+              撤销
+            </button>
+            <button class="btn btn-sm btn-primary" id="btnRecognize">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              识别填入
+            </button>
+            <label class="pen-size">
+              笔粗
+              <input type="range" id="inputPenSize" min="2" max="12" value="7">
+            </label>
+          </div>
+          <div class="canvas-tip" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+            写完点「识别填入」，结果会自动填到下方输入框，请核对后提交
+          </div>
+        </div>
+
+        <!-- 键盘输入备用 -->
+        <div class="keyboard-input">
+          <input type="text" id="txtAnswer" placeholder="也可以在这里键盘输入答案" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="action-buttons">
+          <button class="btn btn-success btn-lg" id="btnSubmit" disabled>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            提交答案
+          </button>
+          <button class="btn btn-secondary" id="btnSkip" disabled>跳过</button>
+          <button class="btn btn-secondary" id="btnGiveUp">显示答案</button>
+          <button class="btn btn-secondary" id="btnQuit">结束听写</button>
+        </div>
+
+        <!-- 结果反馈 -->
+        <div id="resultPanel" class="result-panel hidden">
+          <div class="result-title" id="resultTitle"></div>
+          <div class="result-word">
+            <span class="en-word" id="resultWord"></span>
+            <span class="phonetic" id="resultPhonetic"></span>
+          </div>
+          <div class="result-cn" id="resultCn"></div>
+          <button class="btn btn-sm btn-primary" id="btnResultPlay">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            </svg>
+            再听一遍
+          </button>
+          <button class="btn btn-primary btn-lg" id="btnNext">下一题 →</button>
+        </div>
+      </div>
+
+      <!-- 听写结束 -->
+      <div id="dictDone" class="card hidden">
+        <h3>本次听写完成 🎉</h3>
+        <div class="summary-grid">
+          <div>总数：<b id="sumTotal">0</b></div>
+          <div>正确：<b id="sumRight" class="text-green">0</b></div>
+          <div>错误：<b id="sumWrong" class="text-red">0</b></div>
+          <div>正确率：<b id="sumAcc">--</b></div>
+        </div>
+        <div class="home-actions">
+          <button class="btn btn-primary" id="btnReDict">再来一组</button>
+          <button class="btn btn-secondary" id="btnBackHome">返回首页</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 错题本 ========== -->
+    <section id="tab-wrong" class="tab-panel">
+      <div class="card">
+        <div class="section-header">
+          <h3>错题本</h3>
+          <div>
+            <button class="btn btn-sm btn-primary" id="btnPracticeWrong">错词重练</button>
+            <button class="btn btn-sm btn-secondary" id="btnClearWrong">清空错题</button>
+          </div>
+        </div>
+        <ul id="wrongList" class="word-list">
+          <li class="empty-tip">暂无错题</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ========== 单词管理 ========== -->
+    <section id="tab-words" class="tab-panel">
+      <div class="card">
+        <div class="section-header">
+          <h3>单词管理（<span id="wordCount">0</span> 个）</h3>
+          <div class="import-export">
+            <input type="file" id="fileInput" accept=".csv,.txt" style="display:none">
+            <button class="btn btn-sm" id="btnImport">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              导入CSV/TXT
+            </button>
+            <button class="btn btn-sm" id="btnExport">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              导出CSV
+            </button>
+            <button class="btn btn-sm btn-primary" id="btnAddWord">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              添加
+            </button>
+          </div>
+        </div>
+        <div class="import-tip">
+          格式：英文,中文释义[,音标[,例句]]，每行一个单词，UTF-8 编码。
+          <button class="btn btn-sm" id="btnLoadSample">加载示例词</button>
+          <button class="btn btn-sm btn-primary" id="btnImportAllCET4" style="margin-left:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+            导入全部 CET4 单词 (1910个)
+          </button>
+        </div>
+        <ul id="wordList" class="word-list">
+          <li class="empty-tip">暂无单词，请导入或添加</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ========== 统计页 ========== -->
+    <section id="tab-stats" class="tab-panel">
+      <div class="card">
+        <h3>学习统计</h3>
+        <div class="stat-card">
+          <div class="stat-label">累计学习单词</div>
+          <div class="stat-value" id="statAllTotal">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">累计正确 / 错误</div>
+          <div class="stat-value"><span class="text-green" id="statAllRight">0</span> / <span class="text-red" id="statAllWrong">0</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">累计正确率</div>
+          <div class="stat-value" id="statAllAcc">--</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">连续学习天数</div>
+          <div class="stat-value" id="statAllStreak">0 天</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>近 7 天记录</h3>
+        <ul id="weekList" class="simple-list">
+          <li class="empty-tip">暂无数据</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>数据备份</h3>
+        <p class="tip-text">学习数据保存在浏览器本地（IndexedDB），清除浏览器数据会丢失。建议定期导出单词表备份。</p>
+        <button class="btn btn-secondary" id="btnExportAll">导出全部数据(JSON)</button>
+      </div>
+    </section>
+  </main>
+  </div>
+  <!-- 全局提示 -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://cdn.bootcdn.net/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+  <script src="js/daily_plan.js"></script>
+  <script src="js/cet4_words.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/speech.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/words.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
