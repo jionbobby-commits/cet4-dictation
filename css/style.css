@@ -590,14 +590,14 @@ ul {
 
 /* ========== 结果面板 ========== */
 .result-panel {
-  margin-top: var(--space-lg);
-  padding: var(--space-lg);
-  border-radius: var(--radius-lg);
+  margin-top: var(--space-lg) !important;
+  padding: var(--space-lg) !important;
+  border-radius: var(--radius-lg) !important;
   background: #ffffff !important;
-  border: 2px solid #B8C9BC !important;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
-  text-align: center;
-  animation: expressiveIn 0.3s cubic-bezier(0.2, 0, 0, 1);
+  border: 2px solid #95B8A5 !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
+  text-align: center !important;
+  animation: expressiveIn 0.3s cubic-bezier(0.2, 0, 0, 1) !important;
 }
 
 .result-panel.wrong {
