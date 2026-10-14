@@ -23,7 +23,7 @@ const Stats = (() => {
 
   /**
    * 记录一次听写结果
-   * @param {object} result - { total, right, wrong, words: [{en, isRight}] }
+   * @param {object} result - { total, right, wrong, words: [{en, cn, isRight}] }
    */
   async function recordSession(result) {
     const today = todayStr();
@@ -37,6 +37,9 @@ const Stats = (() => {
       existing.total = (existing.total || 0) + result.total;
       existing.right = (existing.right || 0) + result.right;
       existing.wrong = (existing.wrong || 0) + result.wrong;
+      // 合并单词列表
+      existing.words = existing.words || [];
+      existing.words = existing.words.concat(result.words || []);
       existing.updatedAt = Date.now();
       await dbPut(STORES.records, existing);
       return existing;
@@ -47,6 +50,7 @@ const Stats = (() => {
         total: result.total,
         right: result.right,
         wrong: result.wrong,
+        words: result.words || [],
         createdAt: Date.now()
       });
       return { id, date: today, ...result };
@@ -71,11 +75,18 @@ const Stats = (() => {
     let total = 0;
     let right = 0;
     let wrong = 0;
+    const learnedWords = new Set(); // 去重的已学单词
 
     records.forEach(r => {
       total += r.total || 0;
       right += r.right || 0;
       wrong += r.wrong || 0;
+      // 收集所有学过的单词
+      if (r.words) {
+        r.words.forEach(w => {
+          if (w.en) learnedWords.add(w.en.toLowerCase());
+        });
+      }
     });
 
     const acc = total > 0 ? Math.round(right / total * 100) : 0;
@@ -85,7 +96,8 @@ const Stats = (() => {
       right,
       wrong,
       accuracy: acc,
-      days: records.length
+      days: records.length,
+      learnedWordsCount: learnedWords.size
     };
   }
 
@@ -161,6 +173,13 @@ const Stats = (() => {
       .slice(0, limit);
   }
 
+  /**
+   * 获取全部学习记录
+   */
+  async function getAllRecords() {
+    return await dbGetAll(STORES.records);
+  }
+
   return {
     recordSession,
     getTodayRecord,
@@ -168,6 +187,7 @@ const Stats = (() => {
     getStreak,
     getRecentDays,
     getRecentList,
+    getAllRecords,
     formatDate
   };
 })();

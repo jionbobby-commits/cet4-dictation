@@ -5,6 +5,7 @@
 const SpeechUtil = (() => {
   let voices = [];
   let currentAccent = 'en-US'; // 默认美式
+  let currentRequestId = 0; // 请求计数器，防止串音
 
   /**
    * 加载可用语音列表（等待语音列表就绪）
@@ -54,10 +55,15 @@ const SpeechUtil = (() => {
     const langMap = {
       'en-US': ['en-US', 'en_US'],
       'en-GB': ['en-GB', 'en_GB'],
-      'zh-CN': ['zh-CN', 'zh_CN', 'zh-Hans-CN']
+      'zh-CN': ['zh-CN', 'zh_CN', 'zh-Hans-CN'],
+      'zh-TW': ['zh-TW', 'zh_TW', 'zh-Hant-TW']
     };
 
-    const codes = langMap[accentCode] || langMap['en-US'];
+    const codes = langMap[accentCode];
+    if (!codes) {
+      console.warn('未知口音代码:', accentCode);
+      return null;
+    }
 
     // 优先匹配 Google 语音（通常最自然）
     for (const code of codes) {
@@ -80,14 +86,8 @@ const SpeechUtil = (() => {
       }
     }
 
-    // 再次模糊匹配 en 开头
-    const fallback = voices.find(v => v.lang.startsWith('en'));
-    if (fallback) {
-      console.log('使用兜底语音:', fallback.name, fallback.lang);
-      return fallback;
-    }
-
-    console.warn('未找到任何英语语音');
+    // 对应语言找不到时，不回退到其他语言，直接返回 null
+    console.warn('未找到对应语言的语音:', accentCode);
     return null;
   }
 
@@ -107,7 +107,16 @@ const SpeechUtil = (() => {
         }
 
         const accent = options.accent || currentAccent;
-        const lang = accent === 'en-GB' ? 'en-GB' : 'en';
+        let lang;
+        if (accent === 'en-GB') {
+          lang = 'en-GB';
+        } else if (accent === 'zh-CN') {
+          lang = 'zh-CN';
+        } else if (accent === 'zh-TW') {
+          lang = 'zh-TW';
+        } else {
+          lang = 'en';
+        }
         
         // Google Translate TTS 接口
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&client=tw-ob`;
@@ -148,9 +157,17 @@ const SpeechUtil = (() => {
    * @param {object} options - { accent, rate, onend, onerror }
    */
   function speak(text, options = {}) {
+    // 生成新的请求 ID，旧请求自动失效
+    const requestId = ++currentRequestId;
+    
     return new Promise((resolve, reject) => {
       // 先尝试用在线发音（更稳定，不依赖系统语音包）
-      speakOnline(text, options).then(resolve).catch((err) => {
+      speakOnline(text, options).then(() => {
+        // 检查是否还是当前请求
+        if (requestId !== currentRequestId) return;
+        resolve();
+      }).catch((err) => {
+        if (requestId !== currentRequestId) return;
         console.warn('在线发音失败，尝试系统语音:', err);
         
         // 在线发音失败，再试系统语音
@@ -180,23 +197,25 @@ const SpeechUtil = (() => {
           let finished = false;
 
           utter.onend = () => {
-            if (finished) return;
+            if (finished || requestId !== currentRequestId) return;
             finished = true;
             if (options.onend) options.onend();
             resolve();
           };
 
           utter.onerror = (e) => {
-            if (finished) return;
+            if (finished || requestId !== currentRequestId) return;
             finished = true;
             if (options.onerror) options.onerror(e);
             reject(e);
           };
 
           setTimeout(() => {
+            if (requestId !== currentRequestId) return;
             window.speechSynthesis.speak(utter);
           }, 150);
         } catch (err) {
+          if (requestId !== currentRequestId) return;
           reject(err);
         }
       });

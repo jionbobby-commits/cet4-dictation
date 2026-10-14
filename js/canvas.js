@@ -1,7 +1,7 @@
 /**
  * canvas.js - HTML Canvas 手写板
- * 支持：鼠标 + 触屏书写、撤销、清空、笔粗调节
- * 注意：本模块只负责手写轨迹绘制，不做文字识别
+ * 使用 Pointer Events 统一处理鼠标、触摸、触控笔输入
+ * 修复：坐标偏移、重复绘制、指针捕获问题
  */
 const DrawCanvas = (() => {
   let canvas = null;
@@ -9,13 +9,12 @@ const DrawCanvas = (() => {
   let isDrawing = false;
   let lastX = 0;
   let lastY = 0;
-  let penSize = 7; // 默认笔粗调大一点，方便识别
-  let history = []; // 保存历史快照用于撤销
+  let penSize = 7;
+  let history = [];
   let maxHistory = 20;
 
   /**
    * 初始化手写板
-   * @param {HTMLCanvasElement} canvasEl
    */
   function init(canvasEl) {
     canvas = canvasEl;
@@ -24,27 +23,21 @@ const DrawCanvas = (() => {
     resizeCanvas();
     bindEvents();
 
-    // 保存初始空白状态到历史
     saveHistory();
   }
 
   /**
-   * 调整画布尺寸（适配屏幕宽度变化）
-   * 重要：调整前先保存内容，调整后恢复，避免丢失笔迹
+   * 调整画布尺寸（适配 DPR 和屏幕变化）
    */
   function resizeCanvas() {
     if (!canvas) return;
 
-    // 获取 CSS 尺寸
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
 
-    // 如果容器是隐藏的（宽高为0），跳过本次 resize，等显示后再调
-    if (rect.width < 10 || rect.height < 10) {
-      return;
-    }
+    if (rect.width < 10 || rect.height < 10) return;
 
-    // 保存当前画布内容
+    // 保存当前内容
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = canvas.width;
     tempCanvas.height = canvas.height;
@@ -52,37 +45,36 @@ const DrawCanvas = (() => {
       tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
     }
 
-    // 设置实际像素尺寸（考虑高清屏）
+    // 设置实际像素尺寸
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
 
-    // 设置绘制坐标缩放
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // 用 setTransform 而不是 scale，避免多次 scale 累加
+    // 设置缩放坐标（CSS 像素 = 绘图坐标）
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.strokeStyle = '#1f2937';
     ctx.lineWidth = penSize;
 
-    // 恢复之前的内容
+    // 恢复内容
     if (tempCanvas.width > 0) {
       ctx.drawImage(tempCanvas, 0, 0, rect.width, rect.height);
     }
   }
 
   /**
-   * 绑定鼠标和触摸事件
+   * 绑定 Pointer Events 事件
    */
   function bindEvents() {
-    // 鼠标事件
-    canvas.addEventListener('mousedown', onStart);
-    canvas.addEventListener('mousemove', onMove);
-    canvas.addEventListener('mouseup', onEnd);
-    canvas.addEventListener('mouseleave', onEnd);
+    // 用 Pointer Events 统一处理鼠标、触摸、触控笔
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointerleave', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp);
 
-    // 触摸事件 - 使用 passive: false 以便 preventDefault
-    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
-    canvas.addEventListener('touchend', onEnd, { passive: false });
+    // 阻止浏览器默认触摸行为（滚动、缩放）
+    canvas.style.touchAction = 'none';
 
     // 窗口大小变化时重设画布
     let resizeTimer;
@@ -95,30 +87,7 @@ const DrawCanvas = (() => {
   }
 
   /**
-   * 触摸事件处理 - 转换为坐标后复用鼠标逻辑
-   */
-  function onTouchStart(e) {
-    e.preventDefault(); // 阻止页面滚动
-    const touch = e.touches[0];
-    const mouseEvent = new MouseEvent('mousedown', {
-      clientX: touch.clientX,
-      clientY: touch.clientY
-    });
-    canvas.dispatchEvent(mouseEvent);
-  }
-
-  function onTouchMove(e) {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const mouseEvent = new MouseEvent('mousemove', {
-      clientX: touch.clientX,
-      clientY: touch.clientY
-    });
-    canvas.dispatchEvent(mouseEvent);
-  }
-
-  /**
-   * 获取鼠标/触摸在画布中的相对坐标
+   * 获取指针在画布中的相对坐标（CSS 像素）
    */
   function getPos(e) {
     const rect = canvas.getBoundingClientRect();
@@ -129,10 +98,15 @@ const DrawCanvas = (() => {
   }
 
   /**
-   * 开始绘制
+   * 指针按下 - 开始绘制
    */
-  function onStart(e) {
+  function onPointerDown(e) {
+    e.preventDefault();
     isDrawing = true;
+
+    // 捕获指针，即使离开画布也能继续绘制
+    canvas.setPointerCapture(e.pointerId);
+
     const pos = getPos(e);
     lastX = pos.x;
     lastY = pos.y;
@@ -145,10 +119,12 @@ const DrawCanvas = (() => {
   }
 
   /**
-   * 绘制中
+   * 指针移动 - 绘制线条
    */
-  function onMove(e) {
+  function onPointerMove(e) {
     if (!isDrawing) return;
+    e.preventDefault();
+
     const pos = getPos(e);
 
     ctx.beginPath();
@@ -161,9 +137,9 @@ const DrawCanvas = (() => {
   }
 
   /**
-   * 结束绘制
+   * 指针抬起 - 结束绘制
    */
-  function onEnd() {
+  function onPointerUp(e) {
     if (isDrawing) {
       isDrawing = false;
       saveHistory();
@@ -171,7 +147,7 @@ const DrawCanvas = (() => {
   }
 
   /**
-   * 保存当前画布快照到历史栈（用于撤销）
+   * 保存快照（用于撤销）
    */
   function saveHistory() {
     if (!canvas) return;
@@ -194,7 +170,7 @@ const DrawCanvas = (() => {
       clear();
       return;
     }
-    history.pop(); // 移除当前状态
+    history.pop();
     const prev = history[history.length - 1];
 
     const img = new Image();
@@ -216,9 +192,6 @@ const DrawCanvas = (() => {
     saveHistory();
   }
 
-  /**
-   * 设置笔的粗细
-   */
   function setPenSize(size) {
     penSize = size;
     if (ctx) {
@@ -226,15 +199,12 @@ const DrawCanvas = (() => {
     }
   }
 
-  /**
-   * 获取笔的粗细
-   */
   function getPenSize() {
     return penSize;
   }
 
   /**
-   * 检查画布是否为空（用于判断用户是否写了内容）
+   * 检查画布是否为空
    */
   function isEmpty() {
     if (!canvas) return true;

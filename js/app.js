@@ -17,56 +17,379 @@ const DailyPlan = (() => {
     return `${y}-${m}-${day}`;
   }
 
+  // 格式化日期显示：2026-10-14 → 10/14
+  function formatDateShort(dateStr) {
+    const parts = dateStr.split('-');
+    return `${parts[1]}/${parts[2]}`;
+  }
+
   function load() {
     try {
       if (typeof DAILY_PLAN_DATA === 'undefined') {
-        document.getElementById('todayPlanInfo').textContent = '每日计划数据未加载';
+        console.warn('每日计划数据未加载');
         return;
       }
       
       allPlans = DAILY_PLAN_DATA;
       const today = getTodayStr();
       const todayPlan = allPlans.find(d => d.date === today);
-      const infoEl = document.getElementById('todayPlanInfo');
-      const btnEl = document.getElementById('todayPlanBtn');
-      const dayPicker = document.getElementById('selDayPicker');
 
-      // 初始化天数选择器（按顺序排列：第1天、第2天...）
-      if (dayPicker) {
-        // 清空选项
-        dayPicker.innerHTML = '';
-        
-        // 所有天数选项（正序）
-        let selectedValue = '1';
-        for (let i = 0; i < allPlans.length; i++) {
-          const plan = allPlans[i];
-          const opt = document.createElement('option');
-          opt.value = plan.dayNum;
-          opt.textContent = `第${plan.dayNum}天 · ${plan.date}（${plan.wordCount}词）`;
-          
-          // 如果是今天，默认选中
-          if (todayPlan && plan.dayNum === todayPlan.dayNum) {
-            opt.selected = true;
-            selectedValue = plan.dayNum;
-          }
-          
-          dayPicker.appendChild(opt);
-        }
+      if (todayPlan) {
+        todayWords = todayPlan.words;
+        todayDayNum = todayPlan.dayNum;
       }
 
-      if (!todayPlan) {
-        infoEl.innerHTML = `今天没有安排学习计划<br><small style="color:#9ca3af">计划共 ${allPlans.length} 天</small>`;
-        btnEl.style.display = 'none';
-        return;
-      }
+      // 初始化听写设置里的日期选择器
+      initDatePicker();
 
-      todayWords = todayPlan.words;
-      infoEl.innerHTML = `第 <b>${todayPlan.dayNum}</b> 天 · 共 <b>${todayPlan.wordCount}</b> 个单词`;
-      btnEl.style.display = 'block';
+      // 初始化日期范围选择器
+      initDateRangePicker();
+
+      // 恢复用户的口音设置
+      initAccentSettings();
+
+      // 更新首页的天数和日期显示
+      updateHomeDisplay();
+
+      // 渲染计划页面列表
+      renderPlanList();
+
     } catch (e) {
       console.warn('每日计划加载失败:', e);
-      document.getElementById('todayPlanInfo').textContent = '每日计划加载失败';
     }
+  }
+
+  // 初始化口音设置：从 localStorage 恢复，并绑定保存事件
+  function initAccentSettings() {
+    // 英文口音
+    const enAccent = document.getElementById('selAccent');
+    if (enAccent) {
+      const savedEn = localStorage.getItem('enAccent');
+      if (savedEn) enAccent.value = savedEn;
+      enAccent.addEventListener('change', () => {
+        localStorage.setItem('enAccent', enAccent.value);
+      });
+    }
+    
+    // 中文口音
+    const cnAccent = document.getElementById('selChineseAccent');
+    if (cnAccent) {
+      const savedCn = localStorage.getItem('cnAccent');
+      if (savedCn) cnAccent.value = savedCn;
+      cnAccent.addEventListener('change', () => {
+        localStorage.setItem('cnAccent', cnAccent.value);
+      });
+    }
+  }
+
+  // 初始化听写设置里的日期下拉框
+  function initDatePicker() {
+    const datePicker = document.getElementById('selDailyDate');
+    if (!datePicker) return;
+
+    datePicker.innerHTML = '';
+    let selectedValue = '';
+
+    for (let i = 0; i < allPlans.length; i++) {
+      const plan = allPlans[i];
+      const opt = document.createElement('option');
+      opt.value = plan.date;
+      opt.textContent = `第${plan.dayNum}天 · ${formatDateShort(plan.date)}（${plan.wordCount}词）`;
+      
+      // 默认选中今天
+      if (todayDayNum === plan.dayNum) {
+        opt.selected = true;
+        selectedValue = plan.date;
+      }
+      
+      datePicker.appendChild(opt);
+    }
+
+    // 如果今天不在计划里，默认选第一天
+    if (!selectedValue && allPlans.length > 0) {
+      datePicker.value = allPlans[0].date;
+    }
+  }
+
+  // 获取用户自定义状态（从 localStorage 读取）
+  function getUserStatus(dateStr) {
+    try {
+      const saved = localStorage.getItem('planTaskStatus');
+      if (saved) {
+        const obj = JSON.parse(saved);
+        return obj[dateStr] || null;
+      }
+    } catch (e) {
+      console.warn('读取用户状态失败:', e);
+    }
+    return null;
+  }
+
+  // 保存用户自定义状态到 localStorage
+  function saveUserStatus(dateStr, status) {
+    try {
+      const saved = localStorage.getItem('planTaskStatus');
+      const obj = saved ? JSON.parse(saved) : {};
+      obj[dateStr] = status;
+      localStorage.setItem('planTaskStatus', JSON.stringify(obj));
+    } catch (e) {
+      console.warn('保存用户状态失败:', e);
+    }
+  }
+
+  // 根据日期自动计算默认状态
+  function getAutoStatus(plan) {
+    const today = getTodayStr();
+    const planDate = plan.date;
+    
+    // 已完成的任务始终保留已完成状态
+    if (plan.taskStatus === '✓' || plan.taskStatus === 'done') {
+      return 'done';
+    }
+    
+    // 未来日期：未标记
+    if (planDate > today) {
+      return 'unmarked';
+    }
+    // 今天：未标记
+    else if (planDate === today) {
+      return 'unmarked';
+    }
+    // 过去日期，未完成：补做
+    else {
+      return 'redo';
+    }
+  }
+
+  // 获取当前日期的有效状态（用户修改优先，其次自动计算的默认状态）
+  function getEffectiveStatus(plan) {
+    const userStatus = getUserStatus(plan.date);
+    if (userStatus) {
+      return userStatus;
+    }
+    // 如果 Excel 原始状态是已完成，保留；否则根据日期自动计算
+    if (plan.taskStatus === '✓') {
+      return 'done';
+    }
+    return getAutoStatus(plan);
+  }
+
+  // 获取用户设置的日期范围
+  function getDateRange() {
+    let start = localStorage.getItem('planStartDate');
+    let end = localStorage.getItem('planEndDate');
+    
+    // 默认值：Excel 的第一天和最后一天
+    if (!start && allPlans.length > 0) {
+      start = allPlans[0].date;
+    }
+    if (!end && allPlans.length > 0) {
+      end = allPlans[allPlans.length - 1].date;
+    }
+    
+    return { start, end };
+  }
+
+  // 初始化日期范围选择器
+  function initDateRangePicker() {
+    const startInput = document.getElementById('planStartDate');
+    const endInput = document.getElementById('planEndDate');
+    if (!startInput || !endInput) return;
+    
+    const { start, end } = getDateRange();
+    startInput.value = start;
+    endInput.value = end;
+    
+    // 监听变化
+    startInput.addEventListener('change', () => {
+      if (startInput.value > endInput.value) {
+        alert('起始日期不能晚于结束日期');
+        startInput.value = getDateRange().start;
+        return;
+      }
+      localStorage.setItem('planStartDate', startInput.value);
+      renderPlanList();
+    });
+    
+    endInput.addEventListener('change', () => {
+      if (endInput.value < startInput.value) {
+        alert('结束日期不能早于起始日期');
+        endInput.value = getDateRange().end;
+        return;
+      }
+      localStorage.setItem('planEndDate', endInput.value);
+      renderPlanList();
+    });
+  }
+
+  // 渲染计划页面列表
+  function renderPlanList() {
+    const listEl = document.getElementById('planList');
+    if (!listEl) return;
+
+    listEl.innerHTML = '';
+    const today = getTodayStr();
+
+    // 根据日期范围过滤
+    const { start, end } = getDateRange();
+    const filteredPlans = allPlans.filter(p => p.date >= start && p.date <= end);
+
+    // 统计完成情况
+    let doneCount = 0;
+    let todoCount = 0;
+    let redoCount = 0;
+    let unmarkedCount = 0;
+
+    filteredPlans.forEach(plan => {
+      const card = document.createElement('div');
+      card.className = 'plan-day-card';
+      if (plan.date === today) card.classList.add('today');
+      
+      // 获取有效状态
+      const status = getEffectiveStatus(plan);
+      
+      // 根据状态生成标签
+      let statusHtml = '';
+      let statusClass = '';
+      if (status === '✓' || status === 'done') {
+        statusClass = 'status-done';
+        statusHtml = '<span class="plan-status-badge status-done">✓ 已完成</span>';
+        doneCount++;
+      } else if (status === 'redo') {
+        statusClass = 'status-redo';
+        statusHtml = '<span class="plan-status-badge status-redo">↻ 补做</span>';
+        redoCount++;
+      } else if (status === 'unmarked') {
+        statusClass = 'status-unmarked';
+        statusHtml = '<span class="plan-status-badge status-unmarked">○ 未标记</span>';
+        unmarkedCount++;
+      } else {
+        statusClass = 'status-todo';
+        statusHtml = '<span class="plan-status-badge status-todo">× 未完成</span>';
+        todoCount++;
+      }
+      
+      card.innerHTML = `
+        ${statusHtml}
+        <div class="plan-day-num">第 ${plan.dayNum} 天</div>
+        <div class="plan-day-date">${formatDateShort(plan.date)}</div>
+        <div class="plan-day-words">${plan.wordCount} 个单词</div>
+      `;
+
+      // 点击状态标签，弹出菜单修改状态
+      const badge = card.querySelector('.plan-status-badge');
+      badge.addEventListener('click', (e) => {
+        e.stopPropagation(); // 阻止冒泡到卡片点击
+        cycleStatus(plan.date, card);
+      });
+
+      // 点击卡片跳转到听写页面并开始当天听写
+      card.addEventListener('click', () => {
+        startDictationForDate(plan.date);
+      });
+
+      listEl.appendChild(card);
+    });
+
+    // 更新统计数据
+    updatePlanStats(filteredPlans.length, doneCount, todoCount, redoCount, unmarkedCount);
+  }
+
+  // 循环切换状态：已完成 → 未完成 → 补做 → 未标记 → 已完成
+  function cycleStatus(dateStr, cardEl) {
+    const current = getEffectiveStatus({ date: dateStr });
+    let next;
+    if (current === '✓' || current === 'done') {
+      next = 'todo';
+    } else if (current === 'todo' || current === '□' || current === '✗') {
+      next = 'redo';
+    } else if (current === 'redo') {
+      next = 'unmarked';
+    } else {
+      next = 'done';
+    }
+    
+    saveUserStatus(dateStr, next);
+    
+    // 重新渲染列表和首页统计
+    renderPlanList();
+    refreshHome();
+  }
+
+  // 更新计划页面统计数据
+  function updatePlanStats(total, done, todo, redo, unmarked) {
+    const totalEl = document.getElementById('statTotalDays');
+    const doneEl = document.getElementById('statDoneDays');
+    const todoEl = document.getElementById('statTodoDays');
+    const progressEl = document.getElementById('planProgress');
+    
+    if (totalEl) totalEl.textContent = total;
+    if (doneEl) doneEl.textContent = done;
+    if (todoEl) todoEl.textContent = todo;
+    
+    const progress = total > 0 ? Math.round(done / total * 100) : 0;
+    if (progressEl) progressEl.textContent = progress + '%';
+  }
+
+  // 更新首页的天数和日期显示
+  function updateHomeDisplay() {
+    const today = getTodayStr();
+    const todayPlan = allPlans.find(d => d.date === today);
+    
+    const dateEl = document.getElementById('homeTodayDate');
+    const dayNumEl = document.getElementById('homeTodayDay');
+    const taskListEl = document.getElementById('homeTaskList');
+    
+    if (todayPlan) {
+      dateEl.textContent = formatDateShort(todayPlan.date);
+      dayNumEl.textContent = `第 ${todayPlan.dayNum} 天`;
+      
+      // 渲染今日学习任务列表
+      let statusHtml = '';
+      if (todayPlan.taskStatus === '✓') {
+        statusHtml = '<span class="task-status-badge status-done">✓ 已完成</span>';
+      } else {
+        statusHtml = '<span class="task-status-badge status-todo">□ 未完成</span>';
+      }
+      
+      taskListEl.innerHTML = `
+        <div class="task-item">
+          <div class="task-header">
+            <span class="task-title">今日学习任务</span>
+            ${statusHtml}
+          </div>
+          <div class="task-content">${todayPlan.task}</div>
+          ${todayPlan.review && todayPlan.review !== '（今天是第一批，无需复习旧词）' ? `<div class="task-review">复习安排：${todayPlan.review}</div>` : ''}
+          <div class="task-meta">建议时长：${todayPlan.duration} 分钟 | 新词：${todayPlan.wordCount} 个</div>
+        </div>
+      `;
+    } else {
+      // 判断是早于开始日期还是晚于结束日期
+      const firstDate = allPlans[0]?.date;
+      const lastDate = allPlans[allPlans.length - 1]?.date;
+      
+      dayNumEl.textContent = '计划未开始';
+      dateEl.textContent = '--';
+      
+      if (today < firstDate) {
+        taskListEl.innerHTML = `<div class="task-item"><div class="task-content">学习计划尚未开始<br>计划开始日期：${firstDate}</div></div>`;
+      } else if (today > lastDate) {
+        taskListEl.innerHTML = `<div class="task-item"><div class="task-content">学习计划已结束<br>计划结束日期：${lastDate}<br>你可以查看历史计划进行复习</div></div>`;
+      }
+    }
+  }
+
+  // 根据日期直接开始听写（统一入口）
+  function startDictationForDate(dateStr) {
+    // 切换到听写 tab
+    document.querySelector('[data-tab="dictation"]').click();
+    
+    // 设置日期选择
+    const datePicker = document.getElementById('selDailyDate');
+    if (datePicker) datePicker.value = dateStr;
+    
+    // 自动开始听写
+    document.getElementById('btnBegin').click();
   }
 
   function getTodayWords() {
@@ -79,52 +402,66 @@ const DailyPlan = (() => {
     return plan ? plan.words : [];
   }
 
-  return { load, getTodayWords, getWordsByDay };
+  // 根据日期获取单词
+  function getWordsByDate(dateStr) {
+    const plan = allPlans.find(p => p.date === dateStr);
+    return plan ? plan.words : [];
+  }
+
+  // 根据日期获取天数信息
+  function getDayInfoByDate(dateStr) {
+    const plan = allPlans.find(p => p.date === dateStr);
+    return plan ? { dayNum: plan.dayNum, date: plan.date, wordCount: plan.wordCount } : null;
+  }
+
+  return { load, getTodayWords, getWordsByDay, getWordsByDate, getDayInfoByDate, formatDateShort, startDictationForDate, getEffectiveStatus, getAllPlans: () => allPlans };
 })();
 
 // ========== 听写模式配置 ==========
 const MODE_CONFIG = {
-  listen2en: {
-    name: '听英文→写英文',
-    playType: 'en',        // 播放什么：en=英文, cn=中文, none=不播放
+  listen2cn: {
+    name: '听中文写英文',
+    playType: 'cn',        // 播放什么：en=英文, cn=中文, none=不播放
     answerType: 'en',      // 答案类型：en=英文, cn=中文
-    showPrompt: false,     // 是否显示提示（比如看英文写中文模式要显示英文）
-    promptText: '听发音，写出英文单词',
+    showPrompt: false,     // 是否显示提示
+    promptText: '听中文释义，写出英文单词',
     pickRandom: false      // 单词选取方式
   },
-  listen2en_random: {
-    name: '听英文→写英文（随机）',
+  listen2en: {
+    name: '听英文写英文',
     playType: 'en',
     answerType: 'en',
     showPrompt: false,
     promptText: '听发音，写出英文单词',
-    pickRandom: true
+    pickRandom: false
   },
-  listen2cn: {
-    name: '听中文→写英文',
+  listen2cn_random: {
+    name: '听中文写英文（随机）',
     playType: 'cn',
     answerType: 'en',
     showPrompt: false,
     promptText: '听中文释义，写出英文单词',
     pickRandom: true
   },
-  see2cn: {
-    name: '看英文→写中文',
-    playType: 'none',      // 不播放，直接看
-    answerType: 'cn',      // 写中文释义
-    showPrompt: true,      // 显示英文单词
-    promptText: '看英文，写出中文释义',
-    pickRandom: true
-  },
-  wrong: {
-    name: '错词重练',
+  listen2en_random: {
+    name: '听英文写英文（随机）',
     playType: 'en',
     answerType: 'en',
     showPrompt: false,
-    promptText: '复习错词，写出英文单词',
+    promptText: '听发音，写出英文单词',
     pickRandom: true
   }
 };
+
+// 工具函数：随机打乱数组
+function shuffleArray(arr) {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
 
 // ========== 全局状态 ==========
 const state = {
@@ -193,7 +530,37 @@ async function refreshHome() {
   document.getElementById('statTodayDone').textContent = today.total || 0;
   document.getElementById('statTodayAcc').textContent =
     today.total > 0 ? Math.round(today.right / today.total * 100) + '%' : '--';
-  document.getElementById('statTotalWords').textContent = allStats.total;
+  // 累计学习单词：按任务状态计算
+  const plans = DailyPlan.getAllPlans();
+  const records = await Stats.getAllRecords();
+  
+  // 把听写记录按日期分组，每天的单词去重
+  const wordsByDate = {};
+  records.forEach(r => {
+    if (!wordsByDate[r.date]) wordsByDate[r.date] = new Set();
+    if (r.words) {
+      r.words.forEach(w => {
+        if (w.en) wordsByDate[r.date].add(w.en.toLowerCase());
+      });
+    }
+  });
+
+  let learnedWordsTotal = 0;
+  plans.forEach(plan => {
+    const status = DailyPlan.getEffectiveStatus(plan);
+    if (status === 'done' || status === '✓') {
+      // 已完成：累计全部计划单词
+      learnedWordsTotal += plan.wordCount || 0;
+    } else if (status === 'todo' || status === 'redo') {
+      // 未完成或补做：只累计当天实际听写过的去重单词
+      const dayWords = wordsByDate[plan.date];
+      if (dayWords) {
+        learnedWordsTotal += dayWords.size;
+      }
+    }
+    // unmarked：累计 0
+  });
+  document.getElementById('statTotalWords').textContent = learnedWordsTotal;
   document.getElementById('statWrongCount').textContent = wrongList.length;
   document.getElementById('statStreak').textContent = streak + ' 天';
   document.getElementById('homeWrongCount').textContent = wrongList.length;
@@ -215,7 +582,35 @@ async function refreshStats() {
   const streak = await Stats.getStreak();
   const week = await Stats.getRecentDays(7);
 
-  document.getElementById('statAllTotal').textContent = allStats.total;
+  // 累计学习单词：按任务状态计算
+  const plans = DailyPlan.getAllPlans();
+  const records = await Stats.getAllRecords();
+  
+  // 把听写记录按日期分组，每天的单词去重
+  const wordsByDate = {};
+  records.forEach(r => {
+    if (!wordsByDate[r.date]) wordsByDate[r.date] = new Set();
+    if (r.words) {
+      r.words.forEach(w => {
+        if (w.en) wordsByDate[r.date].add(w.en.toLowerCase());
+      });
+    }
+  });
+
+  let learnedWordsTotal = 0;
+  plans.forEach(plan => {
+    const status = DailyPlan.getEffectiveStatus(plan);
+    if (status === 'done' || status === '✓') {
+      learnedWordsTotal += plan.wordCount || 0;
+    } else if (status === 'todo' || status === 'redo') {
+      const dayWords = wordsByDate[plan.date];
+      if (dayWords) {
+        learnedWordsTotal += dayWords.size;
+      }
+    }
+  });
+
+  document.getElementById('statAllTotal').textContent = learnedWordsTotal;
   document.getElementById('statAllRight').textContent = allStats.right;
   document.getElementById('statAllWrong').textContent = allStats.wrong;
   document.getElementById('statAllAcc').textContent = allStats.accuracy + '%';
@@ -355,42 +750,36 @@ async function startDictationWithWords(wordList) {
 
 /**
  * 开始听写（从设置页进入）
+ * 默认就是每日计划模式，从日期选择器取当天单词
  */
 async function beginDictation() {
   const mode = document.getElementById('selMode').value;
   const accent = document.getElementById('selAccent').value;
-  const playTimes = parseInt(document.getElementById('inputPlayTimes').value) || 2;
-  const wordCount = parseInt(document.getElementById('inputWordCount').value) || 10;
-
-  const modeConfig = MODE_CONFIG[mode] || MODE_CONFIG.listen2en;
+  const playTimes = 2; // 默认播放2次
 
   SpeechUtil.setAccent(accent);
-  state.dictation.mode = mode;
   state.dictation.playTimes = playTimes;
 
-  // 获取单词队列
-  let pool = [];
-  if (mode === 'wrong') {
-    pool = Words.getWrong();
-    if (!pool.length) {
-      showToast('错题本是空的，无法错词重练');
-      return;
-    }
-  } else {
-    pool = Words.getAll();
-    if (!pool.length) {
-      showToast('单词表是空的，请先添加或导入单词');
-      switchTab('words');
-      return;
-    }
+  // 从日期选择器获取选中的日期
+  const dateStr = document.getElementById('selDailyDate').value;
+  const dayWords = DailyPlan.getWordsByDate(dateStr);
+  const dayInfo = DailyPlan.getDayInfoByDate(dateStr);
+
+  if (!dayWords || !dayWords.length) {
+    showToast('当天没有单词计划');
+    return;
   }
 
-  // 选取单词
-  let queue;
+  state.dictation.mode = mode;
+  state.dictation.dayInfo = dayInfo;
+
+  // 根据模式决定是否随机打乱顺序
+  const modeConfig = MODE_CONFIG[mode];
+  let queue = dayWords.map(w => ({ en: w.en, cn: w.cn }));
+  
   if (modeConfig.pickRandom) {
-    queue = Words.pickRandom(pool, wordCount);
-  } else {
-    queue = Words.pickOrder(pool, wordCount);
+    // 随机打乱当天单词顺序
+    queue = shuffleArray(queue);
   }
 
   if (!queue.length) {
@@ -433,7 +822,11 @@ function loadCurrentWord() {
   d.submitted = false;
 
   // 更新进度
-  document.getElementById('progressText').textContent = `第 ${d.index + 1} / ${d.total} 题`;
+  let progressText = `第 ${d.index + 1} / ${d.total} 题`;
+  if (d.dayInfo) {
+    progressText = `第${d.dayInfo.dayNum}天 · ${DailyPlan.formatDateShort(d.dayInfo.date)} | 第 ${d.index + 1} / ${d.total} 题`;
+  }
+  document.getElementById('progressText').textContent = progressText;
   const progress = d.index / d.total;
   const progressX = progress * 1000;
   document.getElementById('progressClipRect').setAttribute('width', progressX);
@@ -494,10 +887,12 @@ async function playCurrentWord(slow = false) {
 
   if (modeConfig.playType === 'en') {
     textToSpeak = word.en;
-    lang = 'en-US';
+    // 英文使用用户选择的英文口音
+    lang = document.getElementById('selAccent').value || 'en-US';
   } else if (modeConfig.playType === 'cn') {
     textToSpeak = word.cn || '';
-    lang = 'zh-CN';
+    // 中文使用用户选择的中文口音
+    lang = document.getElementById('selChineseAccent').value || 'zh-CN';
   } else {
     return; // 不播放的模式
   }
@@ -624,7 +1019,7 @@ async function recognizeHandwriting() {
   isRecognizing = true;
 
   try {
-    btn.innerHTML = '<span class="m3-dots"><span></span><span></span><span></span></span> 正在加载识别引擎...';
+    btn.innerHTML = '<span class="m3-spinner"></span> 正在加载识别引擎...';
     const canvas = document.getElementById('drawCanvas');
 
     // 预处理图片：放大 + 二值化，提高识别率
@@ -633,13 +1028,13 @@ async function recognizeHandwriting() {
     // 获取或创建 worker（首次会下载语言包）
     const worker = await getTesseractWorker((m) => {
       if (m.status === 'recognizing text') {
-        btn.innerHTML = `<span class="m3-dots"><span></span><span></span><span></span></span> 识别中 ${Math.round(m.progress * 100)}%`;
+        btn.innerHTML = `<span class="m3-spinner"></span> 识别中 ${Math.round(m.progress * 100)}%`;
       } else if (m.status === 'loading language traineddata') {
-        btn.innerHTML = '<span class="m3-dots"><span></span><span></span><span></span></span> 首次加载语言包...';
+        btn.innerHTML = '<span class="m3-spinner"></span> 首次加载语言包...';
       }
     });
 
-    btn.innerHTML = '<span class="m3-dots"><span></span><span></span><span></span></span> 识别中...';
+    btn.innerHTML = '<span class="m3-spinner"></span> 识别中...';
 
     // 执行识别（加 10 秒超时保护）
     const timeoutPromise = new Promise((_, reject) => 
@@ -654,22 +1049,8 @@ async function recognizeHandwriting() {
     console.log('识别结果:', text);
 
     if (text) {
-      // 填入输入框，提示用户核对（不自动替换答案，保证判题公平）
+      // 填入输入框，不弹出成功提示，用户自行核对
       document.getElementById('txtAnswer').value = text;
-      
-      // 提示相似度参考，但不自动修改
-      const currentWord = state.dictation.currentWord;
-      if (currentWord) {
-        const target = currentWord.en.toLowerCase();
-        const similarity = calculateSimilarity(text, target);
-        if (similarity >= 0.6) {
-          showToast(`识别结果：${text}，与目标词相似度 ${Math.round(similarity * 100)}%，请核对后提交`);
-        } else {
-          showToast(`识别结果：${text}，请核对后提交`);
-        }
-      } else {
-        showToast(`识别结果：${text}，请核对后提交`);
-      }
     } else {
       showToast('识别失败，请直接打字输入');
     }
@@ -946,12 +1327,22 @@ async function finishDictation() {
   const d = state.dictation;
   d.active = false;
 
-  // 记录到学习统计
+  // 记录到学习统计（包含本轮所有单词）
   await Stats.recordSession({
     total: d.total,
     right: d.right,
-    wrong: d.wrong
+    wrong: d.wrong,
+    words: d.answeredList
   });
+
+  // 听写完成后，自动标记当天的任务为已完成
+  if (d.dayInfo && d.dayInfo.date) {
+    saveUserStatus(d.dayInfo.date, 'done');
+    // 重新渲染计划列表和首页统计
+    renderPlanList();
+    updateHomeDisplay();
+    refreshHome();
+  }
 
   // 显示结束面板
   document.getElementById('dictPlaying').classList.add('hidden');
@@ -1007,21 +1398,37 @@ function bindEvents() {
   });
 
   // 首页按钮
+  // 开始今日听写按钮
   document.getElementById('btnTodayDictation').addEventListener('click', () => {
-    const dayPicker = document.getElementById('selDayPicker');
-    const dayNum = parseInt(dayPicker.value);
-    const words = DailyPlan.getWordsByDay(dayNum);
+    // 获取今天的日期
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${y}-${m}-${day}`;
     
-    if (!words.length) {
-      showToast('该天数没有计划单词');
+    // 检查今天是否在计划内
+    const dayInfo = DailyPlan.getDayInfoByDate(todayStr);
+    if (!dayInfo) {
+      showToast('今天不在学习计划周期内，请查看全部计划');
       return;
     }
-    startDictationWithWords(words);
+    
+    // 直接开始今天的听写
+    DailyPlan.startDictationForDate(todayStr);
   });
   document.getElementById('btnReviewWrong').addEventListener('click', () => {
     switchTab('dictation');
     document.getElementById('selMode').value = 'wrong';
   });
+
+  // 查看全部学习计划按钮
+  const btnViewPlan = document.getElementById('btnViewPlan');
+  if (btnViewPlan) {
+    btnViewPlan.addEventListener('click', () => {
+      document.querySelector('[data-tab="plan"]').click();
+    });
+  }
 
   // 听写控制
   document.getElementById('btnBegin').addEventListener('click', beginDictation);

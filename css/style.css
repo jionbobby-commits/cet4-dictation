@@ -782,3 +782,552 @@ ul {
     font-size: 20px;
   }
 }
+
+/* ========== 每日计划页面 ========== */
+.plan-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.plan-day-card {
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+
+.plan-day-card:hover {
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.plan-day-card.today {
+  background: var(--color-sidebar);
+  border-color: var(--color-primary);
+}
+
+.plan-day-num {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.plan-day-date {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.plan-day-words {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.hint-text {
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  margin-top: 8px;
+}
+
+/* ========== 首页精简样式 ========== */
+.home-main-card {
+  margin-bottom: 16px;
+  padding: 28px;
+}
+
+.home-card-header {
+  margin-bottom: 20px;
+}
+
+.home-date-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-date {
+  font-size: 16px;
+  color: #79747e;
+}
+
+.home-day-num {
+  font-size: 32px;
+  font-weight: 600;
+  color: #1d1b20;
+}
+
+.home-task-preview {
+  font-size: 15px;
+  color: #49454f;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #F9FAEF;
+  border-radius: 16px;
+}
+
+.home-main-btn {
+  width: 100%;
+  font-size: 16px;
+  padding: 16px;
+}
+
+.home-secondary-card {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.home-secondary-card:hover {
+  border-color: #5A6B4E;
+  transform: translateY(-2px);
+}
+
+.home-secondary-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.home-secondary-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1d1b20;
+  margin-bottom: 4px;
+}
+
+.home-secondary-desc {
+  font-size: 14px;
+  color: #79747e;
+}
+
+.home-arrow-icon {
+  color: #79747e;
+}
+
+/* ========== 首页任务列表样式 ========== */
+.home-task-list {
+  margin-bottom: 24px;
+}
+
+.task-item {
+  padding: 16px;
+  background: #F9FAEF;
+  border-radius: 16px;
+  margin-bottom: 12px;
+}
+
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.task-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d1b20;
+}
+
+.task-status-badge {
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.status-done {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status-todo {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.task-content {
+  font-size: 14px;
+  color: #49454f;
+  line-height: 1.6;
+  margin-bottom: 8px;
+  white-space: pre-line;
+}
+
+.task-review {
+  font-size: 13px;
+  color: #79747e;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.task-meta {
+  font-size: 13px;
+  color: #79747e;
+  margin-top: 8px;
+}
+
+/* ========== Material 3 风格加载动画 ========== */
+.m3-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #DEE5D2;
+  border-top-color: #5A6B4E;
+  border-radius: 50%;
+  animation: m3-spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes m3-spin {
+  to { transform: rotate(360deg); }
+}
+
+.recognition-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #F9FAEF;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #5A6B4E;
+}
+
+/* ========== 计划页面统计样式 ========== */
+.plan-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 16px;
+  background: #F9FAEF;
+  border-radius: 16px;
+  margin-bottom: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-num {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1d1b20;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #79747e;
+}
+
+/* ========== 计划卡片状态标签 ========== */
+.plan-day-card {
+  position: relative;
+}
+
+.plan-status-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.plan-status-badge.status-done {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.plan-status-badge.status-todo {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+/* ========== 补充状态标签样式 ========== */
+.plan-status-badge.status-redo {
+  background: #fff8e1;
+  color: #f57c00;
+}
+
+.plan-status-badge.status-unmarked {
+  background: #f5f5f5;
+  color: #757575;
+}
+
+/* ========== 侧边栏圆角优化 ========== */
+.sidebar {
+  margin: 16px;
+  border-radius: 24px;
+  height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-item {
+  margin: 4px 12px;
+  border-radius: 16px;
+  transition: all 0.2s ease;
+}
+
+.sidebar-item:hover {
+  background: rgba(90, 107, 78, 0.08);
+}
+
+.sidebar-item.active {
+  background: rgba(90, 107, 78, 0.15);
+}
+
+/* ========== 计划页 Monet 色彩令牌 ========== */
+:root {
+  --monet-primary: #5A6B4E;
+  --monet-primary-container: #DEE5D2;
+  --monet-surface: #F9FAEF;
+  --monet-surface-variant: #DEE5D2;
+  --monet-on-surface: #1d1b20;
+  --monet-on-surface-variant: #49454f;
+  --monet-outline: #79747e;
+  --monet-success: #2e7d32;
+  --monet-success-container: #e8f5e9;
+  --monet-warning: #ef6c00;
+  --monet-warning-container: #fff3e0;
+  --monet-error: #c62828;
+  --monet-error-container: #ffebee;
+}
+
+/* ========== 顶部统计区域优化：纯文字颜色，无背景块 ========== */
+.plan-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 16px 0;
+  background: transparent;
+  border-radius: 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #DEE5D2;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+}
+
+.stat-num {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1d1b20;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #79747e;
+}
+
+/* 不同状态的文字颜色 */
+.stat-item.status-done .stat-num {
+  color: #2e7d32;
+}
+
+.stat-item.status-todo .stat-num {
+  color: #c62828;
+}
+
+.stat-item.status-redo .stat-num {
+  color: #5e35b1;
+}
+
+/* ========== 日期范围选择器样式 ========== */
+.date-range-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.date-range-item {
+  flex: 1;
+  min-width: 140px;
+}
+
+.date-range-item label {
+  display: block;
+  font-size: 13px;
+  color: #79747e;
+  margin-bottom: 4px;
+}
+
+.date-range-item input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #DEE5D2;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 14px;
+}
+
+/* ========== 首页状态配色统一：Monet 风格，未完成不用橙色 ========== */
+.task-status-badge.status-done {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.task-status-badge.status-todo {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* ========== 下拉菜单圆角统一 ========== */
+select, .form-row select {
+  border-radius: 12px;
+  border: 1px solid #DEE5D2;
+  padding: 10px 14px;
+  background: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+select:focus {
+  border-color: #5A6B4E;
+}
+
+/* ========== M3 鼠尾草绿配色系统 ========== */
+:root {
+  /* 主色 */
+  --sage-primary: #456B56;
+  --sage-primary-dark: #263D30;
+  --sage-primary-light: #DCE9DF;
+  --sage-surface: #F1F6F0;
+  --sage-white: #FFFFFF;
+  
+  /* 文字 */
+  --text-primary: #263D30;
+  --text-secondary: #68776C;
+  
+  /* 边框 */
+  --border-light: #DCE5DC;
+  
+  /* 状态色 */
+  --status-success: #2e7d32;
+  --status-success-bg: #e8f5e9;
+  --status-error: #c62828;
+  --status-error-bg: #ffebee;
+  --status-warning: #5e35b1;
+  --status-warning-bg: #f3e5f5;
+  --status-neutral: #757575;
+  --status-neutral-bg: #f5f5f5;
+}
+
+/* ========== 全局主色替换 ========== */
+body {
+  background: var(--sage-surface);
+}
+
+.btn-primary {
+  background: var(--sage-primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--sage-primary-dark);
+}
+
+.btn-secondary {
+  background: var(--sage-primary-light);
+  color: var(--sage-primary-dark);
+}
+
+.card {
+  background: var(--sage-white);
+  border-radius: 20px;
+}
+
+.sidebar {
+  background: var(--sage-primary-light);
+}
+
+.sidebar-item.active {
+  background: rgba(69, 107, 86, 0.15);
+}
+
+.sidebar-item:hover {
+  background: rgba(69, 107, 86, 0.08);
+}
+
+.progress-bar {
+  background: var(--sage-primary-light);
+}
+
+.wavy-progress {
+  stroke: var(--sage-primary);
+}
+
+/* ========== M3 微交互动效 ========== */
+
+/* 卡片淡入动画 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* 按钮按下效果 */
+.btn {
+  transition: all 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+/* 可点击卡片悬停效果 */
+.plan-day-card {
+  transition: all 0.2s ease;
+}
+
+.plan-day-card:hover {
+  border-color: var(--sage-primary);
+  transform: translateY(-2px);
+}
+
+.home-secondary-card {
+  transition: all 0.2s ease;
+}
+
+.home-secondary-card:hover {
+  border-color: var(--sage-primary);
+  transform: translateY(-2px);
+}
+
+/* 标签页切换动画 */
+.tab-panel {
+  animation: fadeInUp 0.2s ease-out;
+}
+
+/* 减少动画偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
