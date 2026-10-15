@@ -68,3 +68,19 @@ test('empty plan summary reports zero progress', () => {
     total: 0, done: 0, todo: 0, redo: 0, unmarked: 0, progress: 0
   });
 });
+
+
+test('rest days do not affect plan progress and records from a different plan are not applied', () => {
+  const plans = [
+    { date: '2026-10-12', planId: 'new', status: 'todo', wordCount: 5 },
+    { date: '2026-10-13', planId: 'new', isRestDay: true, status: 'unmarked', wordCount: 0 }
+  ];
+  const records = [{ date: '2026-10-12', words: [
+    { en: 'old-word', taskDate: '2026-10-12', taskPlanId: 'old' },
+    { en: 'new-word', taskDate: '2026-10-12', taskPlanId: 'new' }
+  ] }];
+  assert.equal(calculate(plans, records, statusOf), 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(summarize(plans, statusOf))), {
+    total: 1, done: 0, todo: 1, redo: 0, unmarked: 0, progress: 0
+  });
+});

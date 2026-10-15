@@ -28,7 +28,7 @@ const Stats = (() => {
   async function recordSession(result) {
     const today = todayStr();
     const words = (result.words || []).map(word => result.taskDate
-      ? { ...word, taskDate: result.taskDate }
+      ? { ...word, taskDate: result.taskDate, ...(result.taskPlanId ? { taskPlanId: result.taskPlanId } : {}) }
       : word);
 
     // 查找今天是否已有记录
@@ -50,6 +50,7 @@ const Stats = (() => {
       // 新建今天的记录
       const id = await dbAdd(STORES.records, {
         date: today,
+        taskPlanId: result.taskPlanId,
         total: result.total,
         right: result.right,
         wrong: result.wrong,

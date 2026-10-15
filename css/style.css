@@ -499,6 +499,8 @@ input[type="file"] { min-height: 44px; padding: 8px; }
 .plan-status-badge.status-todo { background: var(--md-surface-high); color: var(--md-on-surface-variant); }
 .plan-status-badge.status-redo { background: #f5e7bf; color: #624900; }
 .plan-status-badge.status-unmarked { background: var(--md-surface-high); color: var(--md-on-surface-variant); }
+.plan-status-badge.status-rest { background: var(--md-primary-container); color: var(--md-on-primary-container); cursor: default; }
+.plan-rest-day .plan-day-open:disabled { cursor: default; opacity: .78; }
 #tab-stats > .card:first-child { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 #tab-stats > .card:first-child h3 { grid-column: 1 / -1; margin-bottom: 6px; }
 #tab-stats > .card:first-child .stat-card { background: var(--md-surface-low); border-color: transparent; }

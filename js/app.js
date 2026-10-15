@@ -7,7 +7,9 @@
 const DailyPlan = (() => {
   let todayWords = [];
   let allPlans = [];
-  let todayDayNum = -1;
+  let currentPlanId = '';
+  let planStartDate = '';
+  let planDeadline = '';
 
   function getTodayStr() {
     const d = new Date();
@@ -23,40 +25,65 @@ const DailyPlan = (() => {
     return `${parts[1]}/${parts[2]}`;
   }
 
+  function getWordLibrary() {
+    if (typeof Words !== 'undefined' && Words.getAll().length) return Words.getAll();
+    return typeof ALL_CET4_WORDS !== 'undefined' ? ALL_CET4_WORDS : [];
+  }
+
+  function rebuildPlan(startDate, preserveSelectedDate = true) {
+    const picker = document.getElementById('selDailyDate');
+    const previousDate = preserveSelectedDate ? picker?.value : '';
+    const generated = PlanEngine.generateLearningPlan({ startDate, words: getWordLibrary() });
+    planStartDate = generated.startDate;
+    planDeadline = generated.deadline;
+    currentPlanId = generated.planId;
+    allPlans = generated.days;
+    const today = getTodayStr();
+    const todayPlan = allPlans.find(day => day.date === today);
+    todayWords = todayPlan?.words || [];
+    if (picker) syncDictationDates(allPlans, previousDate);
+    return generated;
+  }
+
   function load() {
     try {
-      if (typeof DAILY_PLAN_DATA === 'undefined') {
-        console.warn('每日计划数据未加载');
-        return;
+      const savedStart = localStorage.getItem('planStartDate');
+      let generated;
+      try {
+        generated = rebuildPlan(savedStart || getTodayStr(), false);
+      } catch (error) {
+        console.warn('旧计划起始日期无效，回退到今天并保留旧存储值:', error);
+        generated = rebuildPlan(getTodayStr(), false);
       }
-      
-      allPlans = DAILY_PLAN_DATA;
-      const today = getTodayStr();
-      const todayPlan = allPlans.find(d => d.date === today);
-
-      if (todayPlan) {
-        todayWords = todayPlan.words;
-        todayDayNum = todayPlan.dayNum;
-      }
-
-      // 初始化听写设置里的日期选择器
-      initDatePicker();
-
-      // 初始化日期范围选择器
+      if (!savedStart || savedStart !== generated.startDate) localStorage.setItem('planStartDate', generated.startDate);
+      localStorage.setItem('planEndDate', generated.deadline);
       initDateRangePicker();
-
-      // 恢复用户的口音设置
       initAccentSettings();
-
-      // 更新首页的天数和日期显示
       updateHomeDisplay();
-
-      // 渲染计划页面列表
       renderPlanList();
-
     } catch (e) {
       console.warn('每日计划加载失败:', e);
     }
+  }
+
+  function syncDictationDates(plans, preferredDate = '') {
+    const datePicker = document.getElementById('selDailyDate');
+    if (!datePicker) return;
+    const validDates = PlanEngine.syncDictationDates({ days: plans });
+    datePicker.replaceChildren(...validDates.map(day => {
+      const option = document.createElement('option');
+      option.value = day.date;
+      option.textContent = day.isRestDay
+        ? `第${day.dayNum}天 · ${formatDateShort(day.date)}（休息日）`
+        : `第${day.dayNum}天 · ${formatDateShort(day.date)}（${day.wordCount}词）`;
+      if (day.isRestDay) option.dataset.restDay = 'true';
+      return option;
+    }));
+    const today = getTodayStr();
+    const selected = plans.some(day => day.date === preferredDate)
+      ? preferredDate
+      : plans.some(day => day.date === today) ? today : plans[0]?.date;
+    if (selected) datePicker.value = selected;
   }
 
   // 初始化口音设置：从 localStorage 恢复，并绑定保存事件
@@ -82,62 +109,32 @@ const DailyPlan = (() => {
     }
   }
 
-  // 初始化听写设置里的日期下拉框
-  function initDatePicker() {
-    const datePicker = document.getElementById('selDailyDate');
-    if (!datePicker) return;
 
-    datePicker.innerHTML = '';
-    let selectedValue = '';
-
-    for (let i = 0; i < allPlans.length; i++) {
-      const plan = allPlans[i];
-      const opt = document.createElement('option');
-      opt.value = plan.date;
-      opt.textContent = `第${plan.dayNum}天 · ${formatDateShort(plan.date)}（${plan.wordCount}词）`;
-      
-      // 默认选中今天
-      if (todayDayNum === plan.dayNum) {
-        opt.selected = true;
-        selectedValue = plan.date;
-      }
-      
-      datePicker.appendChild(opt);
-    }
-
-    // 如果今天不在计划里，默认选第一天
-    if (!selectedValue && allPlans.length > 0) {
-      datePicker.value = allPlans[0].date;
-    }
-  }
-
-  // 获取用户自定义状态（从 localStorage 读取）
+  // 当前计划的状态按计划签名隔离；保留但不套用旧版按日期保存的状态。
   function getUserStatus(dateStr) {
     try {
-      const saved = localStorage.getItem('planTaskStatus');
-      if (saved) {
-        const obj = JSON.parse(saved);
-        return obj[dateStr] || null;
-      }
+      const saved = JSON.parse(localStorage.getItem('planTaskStatusV2') || '{}');
+      return saved[currentPlanId]?.[dateStr] || null;
     } catch (e) {
       console.warn('读取用户状态失败:', e);
+      return null;
     }
-    return null;
   }
 
-  // 保存用户自定义状态到 localStorage
   function saveUserStatus(dateStr, status) {
     try {
-      const saved = localStorage.getItem('planTaskStatus');
-      const obj = saved ? JSON.parse(saved) : {};
-      obj[dateStr] = status;
-      localStorage.setItem('planTaskStatus', JSON.stringify(obj));
+      const saved = JSON.parse(localStorage.getItem('planTaskStatusV2') || '{}');
+      saved[currentPlanId] = saved[currentPlanId] || {};
+      saved[currentPlanId][dateStr] = status;
+      localStorage.setItem('planTaskStatusV2', JSON.stringify(saved));
     } catch (e) {
       console.warn('保存用户状态失败:', e);
     }
   }
 
   // 根据日期自动计算默认状态
+  function setStatus(dateStr, status) { saveUserStatus(dateStr, status); }
+
   function getAutoStatus(plan) {
     const today = getTodayStr();
     const planDate = plan.date;
@@ -174,52 +171,32 @@ const DailyPlan = (() => {
     return getAutoStatus(plan);
   }
 
-  // 获取用户设置的日期范围
-  function getDateRange() {
-    let start = localStorage.getItem('planStartDate');
-    let end = localStorage.getItem('planEndDate');
-    
-    // 默认值：Excel 的第一天和最后一天
-    if (!start && allPlans.length > 0) {
-      start = allPlans[0].date;
-    }
-    if (!end && allPlans.length > 0) {
-      end = allPlans[allPlans.length - 1].date;
-    }
-    
-    return { start, end };
-  }
 
-  // 初始化日期范围选择器
   function initDateRangePicker() {
     const startInput = document.getElementById('planStartDate');
     const endInput = document.getElementById('planEndDate');
     if (!startInput || !endInput) return;
-    
-    const { start, end } = getDateRange();
-    startInput.value = start;
-    endInput.value = end;
-    
-    // 监听变化
+    startInput.value = planStartDate;
+    endInput.value = planDeadline;
+    endInput.readOnly = true;
+    endInput.setAttribute('aria-readonly', 'true');
     startInput.addEventListener('change', () => {
-      if (startInput.value > endInput.value) {
-        alert('起始日期不能晚于结束日期');
-        startInput.value = getDateRange().start;
-        return;
+      if (!startInput.value) { startInput.value = planStartDate; return; }
+      try {
+        const deadline = PlanEngine.getPlanDeadline(startInput.value);
+        localStorage.setItem('planStartDate', startInput.value);
+        rebuildPlan(startInput.value, true);
+        localStorage.setItem('planEndDate', deadline);
+        endInput.value = deadline;
+        updateHomeDisplay();
+        renderPlanList();
+        refreshHome();
+      } catch (error) {
+        alert('起始日期无效，请重新选择');
+        startInput.value = planStartDate;
       }
-      localStorage.setItem('planStartDate', startInput.value);
-      renderPlanList();
     });
-    
-    endInput.addEventListener('change', () => {
-      if (endInput.value < startInput.value) {
-        alert('结束日期不能早于起始日期');
-        endInput.value = getDateRange().end;
-        return;
-      }
-      localStorage.setItem('planEndDate', endInput.value);
-      renderPlanList();
-    });
+    endInput.addEventListener('change', () => { endInput.value = planDeadline; });
   }
 
   // 渲染计划页面列表
@@ -229,38 +206,37 @@ const DailyPlan = (() => {
 
     const today = getTodayStr();
 
-    // 根据日期范围过滤
-    const { start, end } = getDateRange();
-    const filteredPlans = allPlans.filter(p => p.date >= start && p.date <= end);
+    const generatedPlans = allPlans;
 
     // 统计完成情况
     const fragment = document.createDocumentFragment();
-    filteredPlans.forEach(plan => {
+    generatedPlans.forEach(plan => {
       const card = document.createElement('article');
-      card.className = 'plan-day-card';
+      card.className = plan.isRestDay ? 'plan-day-card plan-rest-day' : 'plan-day-card';
       if (plan.date === today) {
         card.classList.add('today');
         card.setAttribute('aria-current', 'date');
       }
       
       // 获取有效状态
-      const status = getEffectiveStatus(plan);
-      const statusInfo = getStatusPresentation(status);
-      
+      const status = plan.isRestDay ? 'rest' : getEffectiveStatus(plan);
+      const statusInfo = plan.isRestDay ? { label: '休息日' } : getStatusPresentation(status);
+      const badge = plan.isRestDay
+        ? '<span class="plan-status-badge status-rest"><span>休息日</span></span>'
+        : createStatusBadge(status, true);
       card.innerHTML = `
-        ${createStatusBadge(status, true)}
-        <button type="button" class="plan-day-open" aria-label="第 ${plan.dayNum} 天，${formatDateShort(plan.date)}，${statusInfo.label}，${plan.wordCount} 个单词。开始听写。">
-          <div class="plan-day-num">第 ${plan.dayNum} 天</div>
+        ${badge}
+        <button type="button" class="plan-day-open" ${plan.isRestDay ? 'disabled' : ''} aria-label="第 ${plan.dayNum} 天，${formatDateShort(plan.date)}，${statusInfo.label}${plan.isRestDay ? '' : `，${plan.wordCount} 个单词。开始听写。`}">
+          <div class="plan-day-num">${plan.isRestDay ? '休息日' : `第 ${plan.dayNum} 天`}</div>
           <div class="plan-day-date">${formatDateShort(plan.date)}</div>
-          <div class="plan-day-words">${plan.wordCount} 个单词</div>
+          <div class="plan-day-words">${plan.isRestDay ? '无需新单词任务' : `${plan.wordCount} 个单词`}</div>
         </button>
       `;
 
-      // 点击状态标签，弹出菜单修改状态
-      bindStatusBadge(card.querySelector('.plan-status-badge'), plan.date, card);
-
-      // 点击卡片跳转到听写页面并开始当天听写
-      card.querySelector('.plan-day-open').addEventListener('click', () => startDictationForDate(plan.date));
+      if (!plan.isRestDay) {
+        bindStatusBadge(card.querySelector('.plan-status-badge'), plan.date, card);
+        card.querySelector('.plan-day-open').addEventListener('click', () => startDictationForDate(plan.date));
+      }
 
       fragment.appendChild(card);
     });
@@ -268,7 +244,7 @@ const DailyPlan = (() => {
     listEl.replaceChildren(fragment);
 
     // 更新统计数据
-    updatePlanStats(summarizePlans(filteredPlans));
+    updatePlanStats(summarizePlans(generatedPlans));
   }
 
   function getStatusPresentation(status) {
@@ -294,7 +270,7 @@ const DailyPlan = (() => {
   }
 
   function summarizePlans(plans) {
-    return summarizePlanStatuses(plans, getEffectiveStatus);
+    return summarizePlanStatuses(plans.filter(plan => !plan.isRestDay), getEffectiveStatus);
   }
 
   // 循环切换状态：已完成 → 未完成 → 补做 → 未标记 → 已完成
@@ -324,9 +300,7 @@ const DailyPlan = (() => {
       const info = getStatusPresentation(next);
       const openButton = cardEl.querySelector('.plan-day-open');
       if (openButton) openButton.setAttribute('aria-label', `第 ${plan.dayNum} 天，${formatDateShort(plan.date)}，${info.label}，${plan.wordCount} 个单词。开始听写。`);
-      const { start, end } = getDateRange();
-      const filteredPlans = allPlans.filter(item => item.date >= start && item.date <= end);
-      updatePlanStats(summarizePlans(filteredPlans));
+      updatePlanStats(summarizePlans(allPlans));
     }
     cardEl.classList.remove('state-updated');
     void cardEl.offsetWidth;
@@ -356,7 +330,11 @@ const DailyPlan = (() => {
     const dayNumEl = document.getElementById('homeTodayDay');
     const taskListEl = document.getElementById('homeTaskList');
     
-    if (todayPlan) {
+    if (todayPlan?.isRestDay) {
+      dateEl.textContent = formatDateShort(todayPlan.date);
+      dayNumEl.textContent = '计划休息日';
+      taskListEl.innerHTML = '<div class="task-item"><div class="task-content">今天是计划休息日，无需完成新的单词任务。</div></div>';
+    } else if (todayPlan) {
       dateEl.textContent = formatDateShort(todayPlan.date);
       dayNumEl.textContent = `第 ${todayPlan.dayNum} 天`;
       
@@ -376,8 +354,8 @@ const DailyPlan = (() => {
       `;
     } else {
       // 判断是早于开始日期还是晚于结束日期
-      const firstDate = allPlans[0]?.date;
-      const lastDate = allPlans[allPlans.length - 1]?.date;
+      const firstDate = planStartDate;
+      const lastDate = planDeadline;
       
       dayNumEl.textContent = '计划未开始';
       dateEl.textContent = '--';
@@ -392,6 +370,8 @@ const DailyPlan = (() => {
 
   // 根据日期直接开始听写（统一入口）
   function startDictationForDate(dateStr) {
+    const plan = allPlans.find(item => item.date === dateStr);
+    if (!plan || plan.isRestDay) { showToast(plan?.isRestDay ? '今天是计划休息日，没有新的听写任务' : '所选日期不在当前计划中'); return; }
     // 切换到听写 tab
     document.querySelector('[data-tab="dictation"]').click();
     
@@ -422,10 +402,10 @@ const DailyPlan = (() => {
   // 根据日期获取天数信息
   function getDayInfoByDate(dateStr) {
     const plan = allPlans.find(p => p.date === dateStr);
-    return plan ? { dayNum: plan.dayNum, date: plan.date, wordCount: plan.wordCount } : null;
+    return plan ? { dayNum: plan.dayNum, date: plan.date, wordCount: plan.wordCount, isRestDay: plan.isRestDay, planId: plan.planId } : null;
   }
 
-  return { load, getTodayWords, getWordsByDay, getWordsByDate, getDayInfoByDate, formatDateShort, startDictationForDate, getEffectiveStatus, getAllPlans: () => allPlans, summarizeAllPlans: () => summarizePlans(allPlans) };
+  return { load, refreshWords: () => { const generated = rebuildPlan(planStartDate, true); updateHomeDisplay(); renderPlanList(); refreshHome(); return generated; }, getTodayWords, getWordsByDay, getWordsByDate, getDayInfoByDate, formatDateShort, startDictationForDate, getEffectiveStatus, setStatus, getAllPlans: () => allPlans, getPlanId: () => currentPlanId, summarizeAllPlans: () => summarizePlans(allPlans) };
 })();
 
 function setMetricText(id, value) {
@@ -846,6 +826,7 @@ function openWordEditor(id = null) {
 async function deleteWord(id) {
   if (!confirm('确定删除这个单词吗？')) return;
   await Words.removeWord(id);
+  DailyPlan.refreshWords();
   refreshWordList();
   showToast('已删除');
 }
@@ -905,10 +886,14 @@ async function beginDictation() {
 
   // 从日期选择器获取选中的日期
   const dateStr = document.getElementById('selDailyDate').value;
-  const dayWords = DailyPlan.getWordsByDate(dateStr);
   const dayInfo = DailyPlan.getDayInfoByDate(dateStr);
+  const dayWords = DailyPlan.getWordsByDate(dateStr);
 
-  if (!dayWords || !dayWords.length) {
+  if (dayInfo?.isRestDay) {
+    showToast('今天是计划休息日，没有新的听写任务');
+    return;
+  }
+  if (!dayInfo || !dayWords || !dayWords.length) {
     showToast('当天没有单词计划');
     return;
   }
@@ -1586,6 +1571,7 @@ async function finishDictation(completed = false) {
   // 仅记录实际提交或跳过的题目；播放、提示和 OCR 本身不计入学习。
   if (d.answeredList.length) await Stats.recordSession({
     taskDate: d.dayInfo?.date,
+    taskPlanId: d.dayInfo?.planId,
     total: d.answeredList.length,
     right: d.right,
     wrong: d.wrong,
@@ -1594,7 +1580,7 @@ async function finishDictation(completed = false) {
 
   // 仅完整完成队列时自动标记任务完成；中途退出保留原状态。
   if (taskCompleted && d.dayInfo && d.dayInfo.date) {
-    saveUserStatus(d.dayInfo.date, 'done');
+    DailyPlan.setStatus(d.dayInfo.date, 'done');
     // 重新渲染计划列表和首页统计
     renderPlanList();
     updateHomeDisplay();
@@ -1637,6 +1623,7 @@ async function importFile(file) {
     });
     setOperationStatus('importStatus', '正在导入单词', 'loading');
     const result = await Words.importFromText(text);
+    DailyPlan.refreshWords();
     setOperationStatus('importStatus', `导入完成：新增 ${result.added} 个，重复 ${result.dup} 个，跳过 ${result.skipped} 个`, 'success');
     showToast(`导入完成：新增 ${result.added} 个，重复 ${result.dup} 个，跳过 ${result.skipped} 个`);
     refreshWordList();
@@ -1784,6 +1771,7 @@ function bindEvents() {
   });
   document.getElementById('btnLoadSample').addEventListener('click', async () => {
     await Words.loadSample();
+    DailyPlan.refreshWords();
     refreshWordList();
     showToast('已加载示例单词');
   });
@@ -1815,6 +1803,7 @@ function bindEvents() {
         await new Promise(r => setTimeout(r, 10)); // 每批之间延迟10ms，不卡页面
       }
       
+      DailyPlan.refreshWords();
       refreshWordList();
       setOperationStatus('importStatus', `导入完成：新增 ${imported} 个 CET-4 单词`, 'success');
       showToast(`已成功导入 ${imported} 个 CET4 单词`);
@@ -1854,6 +1843,7 @@ function bindEvents() {
       }
       document.getElementById('wordEditorDialog').close();
       editingWordId = null;
+      DailyPlan.refreshWords();
       refreshWordList();
     } catch (error) {
       console.error('保存单词失败:', error);
@@ -1890,18 +1880,7 @@ async function init() {
   // 绑定事件
   bindEvents();
 
-  // 临时注释每日计划，先确保基本功能正常
-  // DailyPlan.load();
-
-  // 加载每日计划
-  DailyPlan.load();
-
-  // 刷新首页数据
-  refreshHome();
-
-  console.log('初始化完成，共加载', Words.getAll().length, '个单词');
-
-  // 如果没有单词，自动导入全部 CET4 单词
+  // 如果词库为空，先导入内置词库，再从该动态词库生成唯一计划。
   if (!Words.getAll().length && typeof ALL_CET4_WORDS !== 'undefined') {
     showToast('正在导入 CET4 单词...');
     let imported = 0;
@@ -1921,6 +1900,10 @@ async function init() {
     refreshWordList();
     showToast('已自动加载示例单词');
   }
+
+  DailyPlan.load();
+  refreshHome();
+  console.log('初始化完成，共加载', Words.getAll().length, '个单词');
 }
 
 // DOM 加载完成后启动

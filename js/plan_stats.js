@@ -11,16 +11,19 @@ function calculatePlanWordsLearned(plans, records, getEffectiveStatus) {
       if (!word.en || word.isSkipped || word.userAnswer === '(跳过)') return;
       const taskDate = word.taskDate || record.taskDate || record.date;
       if (!taskDate) return;
-      if (!wordsByTask.has(taskDate)) wordsByTask.set(taskDate, new Set());
-      wordsByTask.get(taskDate).add(word.en.trim().toLowerCase());
+      const taskKey = `${taskDate}:${word.taskPlanId || ''}`;
+      if (!wordsByTask.has(taskKey)) wordsByTask.set(taskKey, new Set());
+      wordsByTask.get(taskKey).add(word.en.trim().toLowerCase());
     });
   });
 
   return plans.reduce((total, plan) => {
+    if (plan.isRestDay) return total;
     const status = getEffectiveStatus(plan);
     if (status === 'done' || status === '✓') return total + (plan.wordCount || 0);
     if (status === 'todo' || status === 'redo') {
-      return total + (wordsByTask.get(plan.date)?.size || 0);
+      const taskKey = `${plan.date}:${plan.planId || ''}`;
+      return total + (wordsByTask.get(taskKey)?.size || 0);
     }
     return total;
   }, 0);
@@ -28,8 +31,9 @@ function calculatePlanWordsLearned(plans, records, getEffectiveStatus) {
 
 /** Summarize plan task states without changing or persisting those states. */
 function summarizePlanStatuses(plans, getEffectiveStatus) {
-  const summary = { total: plans.length, done: 0, todo: 0, redo: 0, unmarked: 0 };
-  plans.forEach(plan => {
+  const studyPlans = plans.filter(plan => !plan.isRestDay);
+  const summary = { total: studyPlans.length, done: 0, todo: 0, redo: 0, unmarked: 0 };
+  studyPlans.forEach(plan => {
     const status = getEffectiveStatus(plan);
     if (status === 'done' || status === '✓') summary.done++;
     else if (status === 'redo') summary.redo++;
